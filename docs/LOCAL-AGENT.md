@@ -11,14 +11,14 @@ the last commit carrying code. Unit tests pass; `instrumentation-tests` does not
 
 ## State of play
 
-One Junction. One artifact, one signing key, one URL, one version code that only goes up.
+One Nethra. One artifact, one signing key, one URL, one version code that only goes up.
 
 | Thing | Where |
 | --- | --- |
-| The only download | `https://splinchgit.github.io/Junction/junction-debug.apk` |
-| Build manifest the app reads | `https://splinchgit.github.io/Junction/latest.json` |
+| The only download | `https://splinchgit.github.io/Nethra/nethra-debug.apk` |
+| Build manifest the app reads | `https://splinchgit.github.io/Nethra/latest.json` |
 | Signing key | `apps/android/debug.keystore`, committed |
-| Version code | CI run number, via `JUNCTION_VERSION_CODE` |
+| Version code | CI run number, via `NETHRA_VERSION_CODE` |
 
 Recent changes, newest first:
 
@@ -60,7 +60,7 @@ one — it is usually an OEM speech service reloading, and it is retried up to
 lifecycle, so screen-off or app-switch stopped the system feeding microphone audio and the
 recogniser went quiet — deaf, but the UI still said listening. `VoiceCallService` declares a
 `microphone` foreground service for as long as the mic is on, with an ongoing notification
-that opens Junction or ends the call. It owns no audio; `AndroidVoiceEngine` still runs the
+that opens Nethra or ends the call. It owns no audio; `AndroidVoiceEngine` still runs the
 recogniser and TTS, so behaviour is identical on screen and off. `START_NOT_STICKY` on
 purpose — resurrecting a call after a process kill would put a hot mic on the phone nobody
 asked for.
@@ -72,13 +72,13 @@ whoever holds the floor a deadline — 45s to think, a length-scaled budget to s
 recogniser silence with every callback counting as proof of life — and `LocalVoiceSession`
 polls it once a second. `ChatManager` also reports the ordinary endings explicitly
 (`endVoiceTurn`), and says the important ones out loud, because on a call an error that
-only lands in the transcript is indistinguishable from Junction hanging up. *Unit tested.*
+only lands in the transcript is indistinguishable from Nethra hanging up. *Unit tested.*
 
-**4. Barge-in while Junction is speaking.** `BargeInDetector` opens a second, short-lived
+**4. Barge-in while Nethra is speaking.** `BargeInDetector` opens a second, short-lived
 `AudioRecord` on `VOICE_COMMUNICATION` underneath playback — never alongside the
 recogniser, which is deliberately un-armed for exactly that window — and reduces each 20ms
 frame to a loudness figure. `BargeInGate` calibrates against the first 300ms of playback,
-which *is* Junction's own voice leaking back through the speaker, then requires 240ms
+which *is* Nethra's own voice leaking back through the speaker, then requires 240ms
 sustained at 12dB above that (floored at −38dBFS) before it fires. Refuses to run at all
 unless `AcousticEchoCanceler.isAvailable()`; on those devices the mic button stays the way
 to cut in. *Gate unit tested; the audio path is what most needs a real room.*
@@ -97,7 +97,7 @@ What that does *not* cover is everything past the seam: real echo in a real room
 OEM speech service, real audio focus. That is the list in §3 below.
 
 `VoiceBackend.REALTIME` still exists and would give server-side full duplex, but it needs
-`JUNCTION_REALTIME_ENDPOINT` and a deployed backend. The local path no longer depends on
+`NETHRA_REALTIME_ENDPOINT` and a deployed backend. The local path no longer depends on
 that landing.
 
 ## Updating the app
@@ -105,7 +105,7 @@ that landing.
 The friction was never the download — it was everything around it.
 
 - **The check ran on cold start only, behind a four-hour cooldown.** A build published
-  while Junction sat in the background was invisible until it was force-closed, reopened,
+  while Nethra sat in the background was invisible until it was force-closed, reopened,
   *and* four hours had passed. Now it runs on every resume (`MainActivity.onResume` bumps
   `foregroundTicks`) behind a five-minute cooldown, so switching away and back is enough.
 - **The banner hid itself after six seconds**, leaving a dot that does nothing when tapped.
@@ -144,8 +144,8 @@ bare "App not installed".
 
 If the keys genuinely differ, what survives an uninstall:
 
-- **Chat, feed and memory do** — plain Room, so `adb shell run-as com.splinch.junction`
-  can tar `/data/data/com.splinch.junction` out and back in on a debug build.
+- **Chat, feed and memory do** — plain Room, so `adb shell run-as com.splinch.nethra`
+  can tar `/data/data/com.splinch.nethra` out and back in on a debug build.
 - **API keys do not.** They are in `EncryptedSharedPreferences` behind an Android Keystore
   master key, and that key is destroyed with the app. They have to be re-entered, whatever
   is restored. `KeyStorage` handles the unreadable-store case without crashing.
@@ -155,9 +155,9 @@ If the keys genuinely differ, what survives an uninstall:
 ### 1. Build and install
 
 ```sh
-python3 tools/companion/junctionctl.py doctor          # phone visible and ready?
+python3 tools/companion/nethractl.py doctor          # phone visible and ready?
 ./gradlew assembleDebug
-python3 tools/companion/junctionctl.py install apps/android/build/outputs/apk/debug/app-debug.apk
+python3 tools/companion/nethractl.py install apps/android/build/outputs/apk/debug/app-debug.apk
 ```
 
 Local builds use the committed keystore, so they install over a button-installed build and
@@ -181,8 +181,8 @@ If step 5 demands an uninstall, signatures diverged — check the fingerprint pr
 ### 3. Test the call
 
 ```sh
-python3 tools/companion/junctionctl.py voice           # stage tracing; shows where a turn dies
-python3 tools/companion/junctionctl.py logs
+python3 tools/companion/nethractl.py voice           # stage tracing; shows where a turn dies
+python3 tools/companion/nethractl.py logs
 ```
 
 - **Have an actual back-and-forth: five or six turns without touching the screen.** This is
@@ -195,23 +195,23 @@ python3 tools/companion/junctionctl.py logs
 - Switch to another app mid-call. Same.
 - Tap **End call** on the notification. The recogniser must actually stop, not just dismiss
   the notification.
-- Watch for the self-answer failure: Junction hearing its own TTS and replying to itself.
+- Watch for the self-answer failure: Nethra hearing its own TTS and replying to itself.
   That is the bug the half-duplex design exists to prevent — if it appears, `onSpeechHeard`
   is re-arming too early.
-- **Ask for something that fails** — with no API key set, or with the network off. Junction
+- **Ask for something that fails** — with no API key set, or with the network off. Nethra
   should say so out loud and then still be listening. Silence there is the old bug.
 - **Ask for something that runs a tool**, and something that needs approval. Both must end
   with the mic back on; the approval one should say it is waiting on screen, and must
   **not** be approvable by voice.
 - **Talk over a long reply.** It should stop mid-word and start listening. On a device with
   no echo canceller it won't, by design — confirm which you have:
-  `adb logcat -s JunctionVoice | grep bargein`. `bargein_unavailable reason=no_aec` means
+  `adb logcat -s NethraVoice | grep bargein`. `bargein_unavailable reason=no_aec` means
   this device keeps the mic button as the only way to interrupt.
-- **The reverse of that is the dangerous one:** if Junction cuts *itself* off mid-sentence,
+- **The reverse of that is the dangerous one:** if Nethra cuts *itself* off mid-sentence,
   the gate is firing on its own echo. Raise `BargeInGate.DEFAULT_MARGIN_DB` or
   `DEFAULT_ABSOLUTE_FLOOR_DB` and say what the room and audio route were.
 
-`VoiceTrace` markers under tag `JunctionVoice` show exactly which stage a turn stops at.
+`VoiceTrace` markers under tag `NethraVoice` show exactly which stage a turn stops at.
 `floor_overrun` means a turn had to be recovered by the watchdog rather than ending on its
 own — the call survives, but the `holder=` on that line says which callback never arrived,
 and that is a real bug worth reporting rather than a normal event.
@@ -226,8 +226,8 @@ back to in-memory rather than crash-looping.
 To exercise the recovery path, corrupt the store and confirm the app still launches:
 
 ```sh
-adb shell run-as com.splinch.junction ls shared_prefs/
-# corrupt junction_keys.xml, relaunch, expect: app starts, keys need re-entering, no crash
+adb shell run-as com.splinch.nethra ls shared_prefs/
+# corrupt nethra_keys.xml, relaunch, expect: app starts, keys need re-entering, no crash
 ```
 
 Changing the lock screen also invalidates the master key on many devices.
@@ -235,7 +235,7 @@ Changing the lock screen also invalidates the master key on many devices.
 ### 5. Test the self-improvement tool
 
 Add a fine-grained GitHub token in Settings → Self-improvement (Contents + Pull requests,
-read and write, scoped to this repo). Ask Junction to make a trivial change.
+read and write, scoped to this repo). Ask Nethra to make a trivial change.
 
 It must open a **pull request** and must never push to `main` or merge. `main` rebuilds the
 APK and republishes it to the URL this phone auto-updates from, so a direct push would ship

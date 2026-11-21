@@ -44,7 +44,7 @@ test("Android chat command survives host store restart and keeps its conversatio
   try {
     store = new NethraStore(directory);
     const api = new NethraApi({ store, scheduler: null, runtime: {} });
-    const selectedModel = "junction-qwen3-next-thinking:80b-q4km";
+    const selectedModel = "nethra-qwen3-next-thinking:80b-q4km";
     const response = await handleNethraChat({ api, content: "Start a Nethra goal: compare university housing costs", conversationId: "phone-chat", requestId: "phone-request", source: "android", selectedLocalModel: selectedModel });
     assert.match(response, /saved objective/);
     const first = store.list();

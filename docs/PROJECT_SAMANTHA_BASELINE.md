@@ -16,7 +16,7 @@ Record the objective ID and compare its journal and usage rows. Count `CLAIMED`,
 
 ## Run status
 
-The audit was submitted through the Junction objective creation API after Windows input could not open Tasks. The installed package and checkout have matching objective API and store files. Submission used the normal request receipt and objective creation transaction without editing the live conversation file. The installed scheduler claimed objective `3ea1e942-1894-4d1e-af69-6f587f18e1f4` and started a Qwen 30B pass. The run finished without an owner intervention.
+The audit was submitted through the Nethra objective creation API after Windows input could not open Tasks. The installed package and checkout have matching objective API and store files. Submission used the normal request receipt and objective creation transaction without editing the live conversation file. The installed scheduler claimed objective `3ea1e942-1894-4d1e-af69-6f587f18e1f4` and started a Qwen 30B pass. The run finished without an owner intervention.
 
 ## Baseline results
 

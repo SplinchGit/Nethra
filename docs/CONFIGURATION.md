@@ -6,17 +6,17 @@ This repo reads credentials and endpoints from per-module config files. Use this
 
 Required (local only, not committed):
 - `local.properties`
-  - `JUNCTION_WEB_CLIENT_ID` (OAuth Web client ID from the same Firebase project)
-  - `JUNCTION_REALTIME_ENDPOINT` (Functions or server SDP endpoint)
-  - `JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT` (recommended)
+  - `NETHRA_WEB_CLIENT_ID` (OAuth Web client ID from the same Firebase project)
+  - `NETHRA_REALTIME_ENDPOINT` (Functions or server SDP endpoint)
+  - `NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT` (recommended)
 
 Files that consume these:
 - `apps/android/build.gradle.kts` -> `BuildConfig.*`
-- `apps/android/src/main/java/com/splinch/junction/data/sync/firebase/AuthManager.kt`
-- `apps/android/src/main/java/com/splinch/junction/data/preference/UserPrefsRepository.kt`
+- `apps/android/src/main/java/com/splinch/nethra/data/sync/firebase/AuthManager.kt`
+- `apps/android/src/main/java/com/splinch/nethra/data/preference/UserPrefsRepository.kt`
 
 Firebase wiring:
-- `apps/android/google-services.json` (not committed; must match `com.splinch.junction`)
+- `apps/android/google-services.json` (not committed; must match `com.splinch.nethra`)
 
 ## Web (`apps/web/`)
 

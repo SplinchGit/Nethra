@@ -31,7 +31,7 @@ Windows production:
 - `apps/windows/src/nethra-api.js`
 - `apps/windows/src/main.js`
 
-Android production (under `apps/android/src/main/java/com/splinch/junction/`):
+Android production (under `apps/android/src/main/java/com/splinch/nethra/`):
 
 - `data/sync/lan/DeviceCommandVerifier.kt`
 - `data/sync/lan/DeviceCommandRunner.kt`
@@ -46,10 +46,10 @@ Tests and verification:
 
 - `apps/windows/test/nethra-notifications.test.js` (new)
 - `apps/windows/scripts/nethra-package-smoke.cjs`
-- `apps/android/src/test/java/com/splinch/junction/data/sync/lan/DeviceCommandVerifierTest.kt`
+- `apps/android/src/test/java/com/splinch/nethra/data/sync/lan/DeviceCommandVerifierTest.kt`
 - `apps/android/src/test/resources/nethra-notification-vector.json` (new Windows-signed fixture)
-- `apps/android/src/androidTest/java/com/splinch/junction/feature/projects/TaskNotificationTest.kt` (new)
-- `apps/android/src/androidTest/java/com/splinch/junction/evaluation/PlanExecutionScenarioRunnerTest.kt` (existing DAO fake updated)
+- `apps/android/src/androidTest/java/com/splinch/nethra/feature/projects/TaskNotificationTest.kt` (new)
+- `apps/android/src/androidTest/java/com/splinch/nethra/evaluation/PlanExecutionScenarioRunnerTest.kt` (existing DAO fake updated)
 
 No new production module was needed. Existing dirty workspace changes and P0 changes remain in place.
 
@@ -109,8 +109,8 @@ Files changed in this follow-up:
 - `apps/windows/src/nethra-store.js`
 - `apps/windows/test/nethra-api.test.js`
 - `apps/windows/scripts/nethra-package-smoke.cjs`
-- `apps/android/src/main/java/com/splinch/junction/feature/projects/NethraPanel.kt`
-- `apps/android/src/androidTest/java/com/splinch/junction/feature/projects/NethraPanelTest.kt`
+- `apps/android/src/main/java/com/splinch/nethra/feature/projects/NethraPanel.kt`
+- `apps/android/src/androidTest/java/com/splinch/nethra/feature/projects/NethraPanelTest.kt`
 - This report and `docs/ARCHITECTURE.md`.
 
 Validation: Windows `npm test` exited 0, with 560 TAP tests plus preceding non-TAP regressions (`artifacts/nethra-p1-preferences-windows.log`). Android unit tests remain 226 passing; app and instrumentation APK builds passed at version code 101206/build 206 (`artifacts/nethra-p1-preferences-android.log`). The new Compose preference test compiled but was not device-executed. Windows packaging and the packaged smoke passed; the smoke now chooses the phone through `NethraApi.dispatch(..., 'android')` before verifying notifications and milestones (`artifacts/nethra-p1-preferences-package-smoke.log`). `git diff --check` passed.

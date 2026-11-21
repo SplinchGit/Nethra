@@ -23,7 +23,7 @@ function identityFixture() {
     keyPair,
     store: {
       getTlsIdentity: () => ({ key: "test-key", certificate: "test-cert" }),
-      getInstanceMetadata: () => ({ instanceId: "pc-1", name: "Junction PC" }),
+      getInstanceMetadata: () => ({ instanceId: "pc-1", name: "Nethra PC" }),
       setInstanceMetadata: () => {},
       getPairedAndroidKeys: () => ({ "phone-1": { publicKey: keyPair.publicKey.export({ type: "spki", format: "pem" }), expiresAt: Date.now() + 60_000 } }),
       getRevocationState: () => ({}),
@@ -122,7 +122,7 @@ test("bootstraps LAN trust from an existing local-brain pairing and rejects a ba
   const server = new LanServer({ identityStore: fixture.store, getBootstrapState: () => ({ brainId, key: sharedKey.toString("base64url") }) });
   const nonce = crypto.randomUUID();
   const request = (socket, proof) => socket.receive({ protocolVersion: 1, type: "pair.bootstrap", requestId: "bootstrap", payload: { brainId, deviceId: "phone-1", publicKey, proof, nonce } });
-  const message = `junction-lan-bootstrap-v2\n${brainId}\nphone-1\n${publicKey}\n${server.certificateFingerprint}\n${server.instanceId}\n${nonce}`;
+  const message = `nethra-lan-bootstrap-v2\n${brainId}\nphone-1\n${publicKey}\n${server.certificateFingerprint}\n${server.instanceId}\n${nonce}`;
   const valid = crypto.createHmac("sha256", sharedKey).update(`client\n${message}`).digest("base64url");
   const accepted = new FakeSocket(); server.accept(accepted); request(accepted, valid); await new Promise(resolve => setImmediate(resolve));
   assert.equal(accepted.sent[0].type, "authenticated"); assert.ok(paired["phone-1"]?.publicKey);
@@ -384,7 +384,7 @@ test("replays completed request IDs without starting a second generation and bou
   assert.ok(server.replayCache.size <= 256);
 });
 
-test("advertises only the Junction service metadata", () => {
+test("advertises only the Nethra service metadata", () => {
   const published = [];
   const discovery = new LanDiscovery({ advertiser: { publish: value => { published.push(value); return { stop() {} }; } } });
   discovery.start({ instanceId: "pc-1", port: 1234, certificateFingerprint: "fp", secret: "never" });

@@ -52,7 +52,7 @@ function taskContract(task,{toolNames=[],state=task}={}){
     version:1,taskId:task.id,
     model:{id,thinking:profile.thinking,thinkingBudget:profile.thinkingBudget,contextTokens:CONTEXT_TOKENS},
     tools:[...available],modelInference:{available:available.has('run_model'),localOnly:true,samplesPerCall:3,maxSamples:50,model:id,note:'Use run_model for independent prompts or measurements; the host queues inference and saves results. No endpoint/credentials are needed. Resume a partial job using jobId.'},scope:{workspace:task.workspace,readRoots:task.readRoots||[],sources:task.sources||[]},
-    permissions:{drafts:available.has('write_draft')?'CREATE_OR_VERSION':'UNAVAILABLE',codeWork:available.has('propose_code_work')?'REVIEWED_PROPOSALS_ONLY':'UNAVAILABLE',externalSending:false},
+    permissions:{drafts:available.has('write_draft')?'CREATE_OR_VERSION':'UNAVAILABLE',codeWork:available.has('propose_code_work')?'REVIEWED_PROPOSALS_ONLY':'UNAVAILABLE',externalSending:false,wallet:available.has('wallet_request_payment')?'OWNER_APPROVAL_PER_PAYMENT':'UNAVAILABLE'},
     continuation:{persistent:task.persistent!==false,continuous:task.continuous===true,mode:task.mode||'FINITE'},
     work:taskWork(task,state),questions,
     review:state.contextCheckpoint?.lastReview?{verdict:state.contextCheckpoint.lastReview.verdict,next:'Address the saved technical review. A REVISE verdict is not approval or an applied change.'}:null

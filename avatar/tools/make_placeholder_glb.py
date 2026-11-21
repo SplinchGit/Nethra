@@ -473,7 +473,7 @@ def build():
         animations.append({"name": name, "samplers": samplers, "channels": channels})
 
     gltf = {
-        "asset": {"version": "2.0", "generator": "junction avatar/tools/make_placeholder_glb.py"},
+        "asset": {"version": "2.0", "generator": "nethra avatar/tools/make_placeholder_glb.py"},
         "scene": 0,
         "scenes": [{"nodes": [0, 1]}],
         "nodes": nodes,

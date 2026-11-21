@@ -58,10 +58,10 @@ test('a long source remains readable through structured pages after restart and 
   task=store.get(task.id);
   assert.equal(task.contextCheckpoint.fileReads[0].nextOffset,firstPage.nextOffset);
   store.close();store=new NethraStore(directory);task=store.get(task.id);
-  task=store.configure(task.id,{model:'junction-qwen3-next:80b-q3km'},task.revision,'read-pages-model-handoff');
+  task=store.configure(task.id,{model:'nethra-qwen3-next:80b-q3km'},task.revision,'read-pages-model-handoff');
   let assembled=firstPage.content,secondCalls=0;
   const runtime={withInference:fn=>fn(),chat:async(_model,messages)=>{
-    assert.equal(_model,'junction-qwen3-next:80b-q3km');
+    assert.equal(_model,'nethra-qwen3-next:80b-q3km');
     const seed=JSON.parse(messages[1].content);
     if(secondCalls++>0)assembled+=JSON.parse(messages.at(-1).content).content;
     const cursor=seed.workingCheckpoint.fileReads[0];
@@ -196,10 +196,10 @@ test('a plan can have no remaining steps while retaining its completed work',asy
 });
 
 test('explicit finish records completed plan steps when the actual task evidence satisfies the goal',async t=>{
-  const f=fixture(t);fs.writeFileSync(path.join(f.root,'facts.txt'),'The measured marker is amber junction 47.');
+  const f=fixture(t);fs.writeFileSync(path.join(f.root,'facts.txt'),'The measured marker is amber nethra 47.');
   Object.assign(f.task,{goal:'Read facts.txt and report the measured marker',plan:['Read facts.txt and report the measured marker'],completedSteps:[],pendingSteps:['Read facts.txt and report the measured marker']});
   let calls=0;
-  const runtime={withInference:fn=>fn(),chat:async()=>({message:{role:'assistant',content:'',tool_calls:[{function:calls++===0?{name:'read_file',arguments:{path:'facts.txt'}}:{name:'finish_objective',arguments:{summary:'facts.txt reports the measured marker amber junction 47.'}}}]}})};
+  const runtime={withInference:fn=>fn(),chat:async()=>({message:{role:'assistant',content:'',tool_calls:[{function:calls++===0?{name:'read_file',arguments:{path:'facts.txt'}}:{name:'finish_objective',arguments:{summary:'facts.txt reports the measured marker amber nethra 47.'}}}]}})};
   const result=await new NethraRunner({store:f.store,runtime}).execute(f.task);
   assert.equal(result.status,'COMPLETED');assert.equal(calls,2);
   assert.deepEqual(result.completedSteps,result.plan);assert.deepEqual(result.pendingSteps,[]);
@@ -311,7 +311,7 @@ test('runner uses native messages, explicit completion and never persists thinki
 
 test('one objective can use 30B, 80B Instruct and 80B Thinking without changing its harness',async t=>{
   const f=fixture(t),calls=[];
-  f.task.model='junction-qwen3-next:80b-q3km';
+  f.task.model='nethra-qwen3-next:80b-q3km';
   const runtime={withInference:fn=>fn(),chat:async(model,messages,tools,signal,onText,format,options)=>{
     calls.push({model,options,system:messages[0].content});
     return {message:{role:'assistant',content:'',tool_calls:[{function:{name:'schedule_wake',arguments:{at:Date.now()+600_000,reason:'Continue work'}}}]}};
@@ -320,9 +320,9 @@ test('one objective can use 30B, 80B Instruct and 80B Thinking without changing 
   await runner.execute(f.task);
   f.task.model='qwen3:30b';
   await runner.execute(f.task);
-  f.task.model='junction-qwen3-next-thinking:80b-q3km';
+  f.task.model='nethra-qwen3-next-thinking:80b-q3km';
   await runner.execute(f.task);
-  assert.deepEqual(calls.map(call=>call.model),['junction-qwen3-next:80b-q3km','qwen3:30b','junction-qwen3-next-thinking:80b-q3km']);
+  assert.deepEqual(calls.map(call=>call.model),['nethra-qwen3-next:80b-q3km','qwen3:30b','nethra-qwen3-next-thinking:80b-q3km']);
   assert.deepEqual(calls.map(call=>call.options.thinking),[false,true,true]);
   assert.deepEqual(calls.map(call=>call.options.num_predict),[1536,1536,6144]);
   assert.equal(calls[2].options.thinkingBudget,undefined);
@@ -331,15 +331,15 @@ test('one objective can use 30B, 80B Instruct and 80B Thinking without changing 
 test('a requested local file read cannot be replaced by a directory listing and a copied success criterion',async t=>{
   const f=fixture(t);
   f.task.objective='Read the approved facts file at facts.txt, then create report.md with its witness';
-  f.task.successCriteria='report.md contains amber junction 47';
-  fs.writeFileSync(path.join(f.root,'facts.txt'),'Acceptance witness: amber junction 47');
+  f.task.successCriteria='report.md contains amber nethra 47';
+  fs.writeFileSync(path.join(f.root,'facts.txt'),'Acceptance witness: amber nethra 47');
   const steps=['Read facts file','Write report'];let call=0;
   const runtime={withInference:fn=>fn(),chat:async()=>({message:{role:'assistant',content:'',tool_calls:++call===1?[
     {function:{name:'list_directory',arguments:{path:f.root}}},
-    {function:{name:'write_draft',arguments:{path:'report.md',content:'amber junction 47'}}},
+    {function:{name:'write_draft',arguments:{path:'report.md',content:'amber nethra 47'}}},
     {function:{name:'update_plan',arguments:{steps,completedSteps:steps}}}
   ]:call===2?[
-    {function:{name:'finish_objective',arguments:{summary:'The report contains amber junction 47'}}}
+    {function:{name:'finish_objective',arguments:{summary:'The report contains amber nethra 47'}}}
   ]:[
     {function:{name:'request_input',arguments:{reason:'OWNER_PREFERENCE',blocking:true,question:'I still need to read the approved facts file.'}}}
   ]}})};
@@ -414,25 +414,25 @@ test('plain model prose yields a bounded retry without claiming progress or requ
   const result=await new NethraRunner({store:f.store,runtime}).execute(f.task);assert.equal(n,3);assert.equal(result.status,'SLEEPING');assert.equal(result.evidence.length,0);assert.ok(result.nextWakeAt>Date.now());
 });
 test('a model that writes tool names as prose gets a bounded native-tool recovery',async t=>{
-  const f=fixture(t);fs.writeFileSync(path.join(f.root,'facts.txt'),'The marker is amber junction 47.');
-  f.task.goal='Read facts.txt and report the marker';f.task.successCriteria='Read facts.txt and report amber junction 47.';
+  const f=fixture(t);fs.writeFileSync(path.join(f.root,'facts.txt'),'The marker is amber nethra 47.');
+  f.task.goal='Read facts.txt and report the marker';f.task.successCriteria='Read facts.txt and report amber nethra 47.';
   const offered=[];let n=0;
   const runtime={withInference:fn=>fn(),chat:async(_model,_messages,tools)=>{
     offered.push(tools.map(item=>item.function.name));n++;
-    const calls=n===1?[{function:{name:'read_file',arguments:{path:'facts.txt'}}}]:n===4?[{function:{name:'update_plan',arguments:{steps:['Read facts.txt and report marker'],completedSteps:['Read facts.txt and report marker']}}}]:n===5?[{function:{name:'finish_objective',arguments:{summary:'facts.txt reports amber junction 47.'}}}]:[];
-    return {message:{role:'assistant',content:calls.length?'':'finish_objective The marker is amber junction 47.',tool_calls:calls}};
+    const calls=n===1?[{function:{name:'read_file',arguments:{path:'facts.txt'}}}]:n===4?[{function:{name:'update_plan',arguments:{steps:['Read facts.txt and report marker'],completedSteps:['Read facts.txt and report marker']}}}]:n===5?[{function:{name:'finish_objective',arguments:{summary:'facts.txt reports amber nethra 47.'}}}]:[];
+    return {message:{role:'assistant',content:calls.length?'':'finish_objective The marker is amber nethra 47.',tool_calls:calls}};
   }};
   const result=await new NethraRunner({store:f.store,runtime}).execute(f.task);
   assert.equal(result.status,'COMPLETED');assert.equal(result.evidence[0].tool,'read_file');
   assert.deepEqual(offered[3].sort(),['finish_objective','request_input','schedule_wake','update_plan']);
 });
 test('80B whole textual JSON tool calls use the same validated task pipeline',async t=>{
-  const f=fixture(t);fs.writeFileSync(path.join(f.root,'facts.txt'),'The marker is amber junction 47.');
-  f.task.model='junction-qwen3-next:80b-q3km';f.task.goal='Read facts.txt and report the marker';f.task.successCriteria='Read facts.txt and report amber junction 47.';
+  const f=fixture(t);fs.writeFileSync(path.join(f.root,'facts.txt'),'The marker is amber nethra 47.');
+  f.task.model='nethra-qwen3-next:80b-q3km';f.task.goal='Read facts.txt and report the marker';f.task.successCriteria='Read facts.txt and report amber nethra 47.';
   const outputs=[
     {tool_calls:[{function:{name:'read_file',arguments:{path:'facts.txt'}}}],content:''},
     {content:'update_plan {"steps":["Read facts.txt"],"completedSteps":["Read facts.txt"]}'},
-    {content:'finish_objective {"summary":"facts.txt reports amber junction 47."}'}
+    {content:'finish_objective {"summary":"facts.txt reports amber nethra 47."}'}
   ];
   const runtime={withInference:fn=>fn(),chat:async()=>({message:{role:'assistant',...outputs.shift()}})};
   const result=await new NethraRunner({store:f.store,runtime}).execute(f.task);

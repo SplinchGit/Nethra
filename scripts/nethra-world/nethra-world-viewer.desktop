@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Nethra World
+Comment=View Nethra World conversation and activity
+Exec=/usr/local/bin/nethra-world-viewer
+Icon=web-browser
+Terminal=false
+StartupNotify=true
+Categories=Utility;

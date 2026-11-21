@@ -81,7 +81,7 @@ function waitingFor(task,store,now=Date.now()){
 
 function activityLine(event){
   const model=recordedModel(event.detail)||'qwen3:30b';
-  if(event.kind==='CLAIMED')return {kind:'running',line:'Started a work pass',actor:'Junction',model:null};
+  if(event.kind==='CLAIMED')return {kind:'running',line:'Started a work pass',actor:'Nethra',model:null};
   if(event.kind==='MODEL_STEP')return {kind:'running',line:event.detail?.scope==='child'?'Child researcher is working through the next action':'Thinking through the next action',actor:'Nethra',model:recordedModel(event.detail)||'qwen3:30b'};
   if(event.kind==='NETHRA_UPDATE')return {kind:'update',line:short(event.detail?.text,300),actor:'Nethra',model:recordedModel(event.detail)||'qwen3:30b'};
   if(event.kind==='TOOL_STARTED')return {kind:'running',line:toolStartedLine(event.detail?.tool),actor:'Nethra',model:recordedModel(event.detail)||'qwen3:30b'};
@@ -95,15 +95,15 @@ function activityLine(event){
     return {kind:item.result?.error?'error':'verified',line:evidenceLine(item),actor:'Nethra',model};
   }
   if(event.kind==='CODEX_ASSISTED_BRIDGE')return {kind:'advice',line:'Codex advice saved as a technical handoff; Nethra did not call it itself',actor:'Codex',model:recordedModel(event.detail?.evidence?.find(item=>item.tool==='consult_codex')?.result)};
-  if(event.kind==='EXPERIMENT_CONCLUDED'&&event.detail?.result)return {kind:'verified',line:verdictLine(event.detail.result),actor:'Junction',model:null};
-  if(event.kind==='EXPERIMENT_INVALIDATED')return {kind:'error',line:`Experiment withdrawn as invalid: ${short(event.detail?.reason,160)}`,actor:'Junction',model:null};
-  if(event.kind==='EXPERIMENT_ABANDONED')return {kind:'verified',line:`Abandoned unused experiment baseline: ${short(event.detail?.reason,160)}`,actor:'Junction',model:null};
+  if(event.kind==='EXPERIMENT_CONCLUDED'&&event.detail?.result)return {kind:'verified',line:verdictLine(event.detail.result),actor:'Nethra',model:null};
+  if(event.kind==='EXPERIMENT_INVALIDATED')return {kind:'error',line:`Experiment withdrawn as invalid: ${short(event.detail?.reason,160)}`,actor:'Nethra',model:null};
+  if(event.kind==='EXPERIMENT_ABANDONED')return {kind:'verified',line:`Abandoned unused experiment baseline: ${short(event.detail?.reason,160)}`,actor:'Nethra',model:null};
   if(event.kind==='CONTEXT_COMPACTED'){
     const results=event.detail?.compacted||0,exchanges=event.detail?.removedExchanges||0;
     const parts=[];if(results)parts.push(`${results} older tool result${results===1?'':'s'}`);if(exchanges)parts.push(`${exchanges} older exchange${exchanges===1?'':'s'}`);
-    return {kind:'waiting',line:`Compacted ${parts.join(' and ')||'older context'} to fit the context window`,actor:'Junction',model:null};
+    return {kind:'waiting',line:`Compacted ${parts.join(' and ')||'older context'} to fit the context window`,actor:'Nethra',model:null};
   }
-  if(event.kind==='BUDGET_WAIT')return {kind:'waiting',line:'Paused at the daily model-time limit',actor:'Junction',model:null};
+  if(event.kind==='BUDGET_WAIT')return {kind:'waiting',line:'Paused at the daily model-time limit',actor:'Nethra',model:null};
   if(event.kind==='MILESTONE_VERIFIED')return {kind:'verified',line:`Verified milestone: ${short(event.detail?.summary,180)}`,actor:'Nethra',model};
   if(event.kind==='nethra_completed')return {kind:'verified',line:'Finished the task with verified evidence',actor:'Nethra',model};
   if(event.kind==='nethra_approved_action')return {kind:'verified',line:'Completed an owner-approved action',actor:'Nethra',model};
@@ -111,7 +111,7 @@ function activityLine(event){
   if(event.kind==='nethra_input_required')return {kind:'waiting',line:'Asked you for a decision',actor:'Nethra',model};
   if(event.kind==='nethra_sleeping')return {kind:'waiting',line:'Scheduled a later check',actor:'Nethra',model};
   if(event.kind==='nethra_budget_reached')return {kind:'waiting',line:'Saved this pass to continue later',actor:'Nethra',model};
-  if(event.kind==='EXECUTED')return {kind:'pass',line:'Finished this work pass',actor:'Junction',model:null};
+  if(event.kind==='EXECUTED')return {kind:'pass',line:'Finished this work pass',actor:'Nethra',model:null};
   return null;
 }
 function toolStartedLine(tool){

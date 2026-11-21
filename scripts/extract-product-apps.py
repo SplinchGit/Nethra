@@ -5,7 +5,7 @@ import json
 import shutil
 
 SOURCE = Path(__file__).resolve().parents[1]
-DAW = SOURCE.parent / 'Junction-DAW'
+DAW = SOURCE.parent / 'Nethra-DAW'
 MAFIOSO = SOURCE.parent / '0Mafioso' / 'Mafioso' / 'apps' / 'android'
 manifest = []
 
@@ -64,21 +64,21 @@ dependencies {{
 }}
 ''')
 
-scaffold(DAW, 'Junction-DAW', 'com.splinch.junction.daw')
-java = 'apps/android/src/main/java/com/splinch/junction/'
-copy(java + 'feature/music', DAW, 'app/src/main/java/com/splinch/junction/feature/music')
-copy(java + 'platform/audio', DAW, 'app/src/main/java/com/splinch/junction/platform/audio')
-copy(java + 'feature/migration/MusicArchive.kt', DAW, 'app/src/main/java/com/splinch/junction/feature/migration/MusicArchive.kt')
-copy('apps/android/src/test/java/com/splinch/junction/feature/music', DAW, 'app/src/test/java/com/splinch/junction/feature/music')
-copy('apps/android/src/test/java/com/splinch/junction/feature/migration', DAW, 'app/src/test/java/com/splinch/junction/feature/migration')
+scaffold(DAW, 'Nethra-DAW', 'com.splinch.nethra.daw')
+java = 'apps/android/src/main/java/com/splinch/nethra/'
+copy(java + 'feature/music', DAW, 'app/src/main/java/com/splinch/nethra/feature/music')
+copy(java + 'platform/audio', DAW, 'app/src/main/java/com/splinch/nethra/platform/audio')
+copy(java + 'feature/migration/MusicArchive.kt', DAW, 'app/src/main/java/com/splinch/nethra/feature/migration/MusicArchive.kt')
+copy('apps/android/src/test/java/com/splinch/nethra/feature/music', DAW, 'app/src/test/java/com/splinch/nethra/feature/music')
+copy('apps/android/src/test/java/com/splinch/nethra/feature/migration', DAW, 'app/src/test/java/com/splinch/nethra/feature/migration')
 write(DAW, 'app/src/main/AndroidManifest.xml', '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-<application android:label="Junction DAW" android:allowBackup="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+<application android:label="Nethra DAW" android:allowBackup="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
 <activity android:name=".MainActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
 <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.updates" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths"/></provider>
 </application></manifest>''')
 write(DAW, 'app/src/main/res/xml/file_paths.xml', '<paths><cache-path name="mixes" path="music-exports/"/></paths>')
-write(DAW, 'app/src/main/java/com/splinch/junction/daw/MainActivity.kt', '''package com.splinch.junction.daw
+write(DAW, 'app/src/main/java/com/splinch/nethra/daw/MainActivity.kt', '''package com.splinch.nethra.daw
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -89,8 +89,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.splinch.junction.feature.music.ui.MusicEditorScreen
-import com.splinch.junction.feature.migration.MusicArchive
+import com.splinch.nethra.feature.music.ui.MusicEditorScreen
+import com.splinch.nethra.feature.migration.MusicArchive
 import kotlinx.coroutines.*
 
 class MainActivity : ComponentActivity() {
@@ -127,11 +127,11 @@ class MainActivity : ComponentActivity() {
                         TextButton(onClick = { studio = false }) { Text("Project files") }
                         MusicEditorScreen(Modifier.weight(1f))
                     } else Column(Modifier.padding(16.dp)) {
-                        Text("Junction DAW", style = MaterialTheme.typography.headlineMedium)
-                        Text("Your offline music studio. Import an existing Junction music ZIP before opening a fresh studio. Existing projects are never overwritten by import.")
+                        Text("Nethra DAW", style = MaterialTheme.typography.headlineMedium)
+                        Text("Your offline music studio. Import an existing Nethra music ZIP before opening a fresh studio. Existing projects are never overwritten by import.")
                         Button(onClick = { studio = true }, enabled = !busy) { Text("Open studio") }
                         OutlinedButton(onClick = { importer.launch(arrayOf("application/zip", "application/octet-stream")) }, enabled = !busy) { Text("Import project") }
-                        OutlinedButton(onClick = { exporter.launch("junction-music.zip") }, enabled = !busy) { Text("Export project") }
+                        OutlinedButton(onClick = { exporter.launch("nethra-music.zip") }, enabled = !busy) { Text("Export project") }
                         Text(status)
                     }
                 }
@@ -140,31 +140,31 @@ class MainActivity : ComponentActivity() {
     }
 }
 ''')
-write(DAW, 'README.md', '''# Junction DAW
+write(DAW, 'README.md', '''# Nethra DAW
 
-Standalone offline Android studio extracted from Junction on 2026-09-27.
+Standalone offline Android studio extracted from Nethra on 2026-09-27.
 Preserves arrangement, piano roll, mixer, automation, synth/sampler, WAV import,
 recording, WAV export, undo/redo, autosave and renderer tests. No account or AI API.
 
 Build with JDK 17+ and Android SDK 36: `./gradlew :app:testDebugUnitTest :app:assembleDebug`.
 AGP uses built-in Kotlin; do not add the Kotlin Android plugin.
 
-## Transfer from Junction
-Update Junction, open Settings and choose **Export existing music project**.
+## Transfer from Nethra
+Update Nethra, open Settings and choose **Export existing music project**.
 Save the ZIP using Android's document picker. In a fresh DAW installation choose
-**Import project**, select that ZIP, then **Open studio**. Junction retains its
+**Import project**, select that ZIP, then **Open studio**. Nethra retains its
 original files. No chat, keys or account data enter the archive. Import refuses
 to overwrite existing studio data; export your current project before resetting
 the standalone app. Import/export limits: 512 MiB, 4096 files. WAV rendering is
 separate from full-project ZIP export.
 
 Microphone permission is requested only for recording. This app has no Internet
-permission. Debug signing is independent; no Junction signing credentials copied.
+permission. Debug signing is independent; no Nethra signing credentials copied.
 Physical audio/recording and device UI tests remain to be run on hardware.
 ''')
 
 scaffold(MAFIOSO, 'Mafioso-Android', 'com.splinch.mafioso', 'implementation("com.android.billingclient:billing-ktx:8.0.0")')
-copy(java + 'feature/mafioso', MAFIOSO, 'app/src/main/java/com/splinch/junction/feature/mafioso')
+copy(java + 'feature/mafioso', MAFIOSO, 'app/src/main/java/com/splinch/nethra/feature/mafioso')
 write(MAFIOSO, 'app/src/main/AndroidManifest.xml', '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 <uses-permission android:name="android.permission.INTERNET"/>
 <application android:label="Mafioso" android:allowBackup="false" android:usesCleartextTraffic="false" android:theme="@android:style/Theme.Material.Light.NoActionBar">
@@ -178,7 +178,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
-import com.splinch.junction.feature.mafioso.ui.MafiosoScreen
+import com.splinch.nethra.feature.mafioso.ui.MafiosoScreen
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -188,15 +188,15 @@ class MainActivity : ComponentActivity() {
 ''')
 write(MAFIOSO, 'README.md', '''# Mafioso Android
 
-Independent Android launcher + Play Billing bridge ported from Junction.
+Independent Android launcher + Play Billing bridge ported from Nethra.
 The game's existing frontend/backend remain authoritative and unchanged.
 Build from this directory using JDK 17+ and Android SDK 36:
 `./gradlew :app:assembleDebug`.
 
-Uses application ID `com.splinch.mafioso`, not Junction's application ID.
+Uses application ID `com.splinch.mafioso`, not Nethra's application ID.
 Before Play release, register this app and its existing `mafioso_points_*`
 products, configure signing and update the backend Google Play package setting.
-The current infrastructure default `com.splinch.junction` belongs to the old
+The current infrastructure default `com.splinch.nethra` belongs to the old
 embedded app. Existing purchases must remain verifiable under their original
 package; plan dual-package verification/migration before releasing this wrapper.
 No production billing configuration or deployment has been changed here.

@@ -65,7 +65,7 @@ async function syncAdminClaim(decodedToken) {
 }
 
 const BASE_INSTRUCTIONS = [
-  "You are JunctionGPT, a calm local-first assistant.",
+  "You are NethraGPT, a calm local-first assistant.",
   "When you propose any state-changing action, always use tools and wait for user confirmation.",
   "Never assume permission to apply changes; the user must press Apply.",
   "Keep responses concise, supportive, and practical."
@@ -350,7 +350,7 @@ async function verifyAuth(req, res, next) {
 
 async function verifyAuthOrChatKey(req, res, next) {
   if (CHAT_API_KEY) {
-    const key = req.get("X-Junction-Chat-Key") || "";
+    const key = req.get("X-Nethra-Chat-Key") || "";
     if (key && key === CHAT_API_KEY) {
       req.user = { uid: "chat-key", isAdmin: false };
       return next();
@@ -595,7 +595,7 @@ app.post(
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/vnd.github+json",
-            "User-Agent": "Junction"
+            "User-Agent": "Nethra"
           }
         });
         if (!response.ok) throw new Error("GitHub fetch failed");
@@ -711,12 +711,12 @@ app.get("/integrations/:provider/callback", async (req, res) => {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Junction Connected</title>
+    <title>Nethra Connected</title>
   </head>
   <body>
     <h2>Integration connected</h2>
     <p>You can return to the app.</p>
-    <p><a href="${redirect}">Open Junction</a></p>
+    <p><a href="${redirect}">Open Nethra</a></p>
   </body>
 </html>`);
   } catch (_err) {
@@ -876,5 +876,5 @@ app.post(
 );
 
 app.listen(PORT, () => {
-  console.log(`Junction server listening on ${PORT}`);
+  console.log(`Nethra server listening on ${PORT}`);
 });

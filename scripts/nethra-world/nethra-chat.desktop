@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Nethra
+Comment=Talk to Nethra and follow its activity
+Exec=/usr/local/bin/nethra-chat
+Icon=utilities-terminal
+Terminal=false
+StartupNotify=true
+Categories=Utility;Chat;

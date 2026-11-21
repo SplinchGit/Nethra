@@ -8,12 +8,12 @@ const { promisify } = require("node:util");
 
 const execFileAsync = promisify(execFile);
 
-// Junction runs the owner's own, unmodified Claude Code binary. It never reads,
+// Nethra runs the owner's own, unmodified Claude Code binary. It never reads,
 // stores or forwards Claude credentials; sign-in stays inside Anthropic's own flow.
 // The npm shim is a .cmd file, which cannot be spawned without a shell, so prefer
 // the real executable it points at.
 function resolveClaudeExecutable(env = process.env, exists = fs.existsSync) {
-  if (env.JUNCTION_CLAUDE_PATH && exists(env.JUNCTION_CLAUDE_PATH)) return env.JUNCTION_CLAUDE_PATH;
+  if (env.NETHRA_CLAUDE_PATH && exists(env.NETHRA_CLAUDE_PATH)) return env.NETHRA_CLAUDE_PATH;
   if (process.platform !== "win32") return "claude";
   const candidates = [
     path.join(env.USERPROFILE || os.homedir(), ".local", "bin", "claude.exe"),
@@ -64,17 +64,17 @@ function parseClaudeStream(output) {
   return { content: patch ? content.trimStart().replace(/[\r\n]+$/, "") : content.trim(), isError: Boolean(result?.is_error), model, usage, rateLimit };
 }
 
-const ADVISOR_SYSTEM = "You are a technical advisor to Nethra, a local agent working on an owner-approved objective inside the Junction app. You have no tools and cannot see files, run code or browse. Give concise, concrete, verifiable advice in at most 250 words. Say what should be measured to confirm it. Never claim to have done anything.";
+const ADVISOR_SYSTEM = "You are a technical advisor to Nethra, a local agent working on an owner-approved objective inside the Nethra app. You have no tools and cannot see files, run code or browse. Give concise, concrete, verifiable advice in at most 250 words. Say what should be measured to confirm it. Never claim to have done anything.";
 
 /** One tool-less, settings-less, non-persisted Claude turn. The prompt travels on stdin, never a shell. */
-function sendClaudeConsult({ prompt, workingDirectory, model = "sonnet", systemPrompt = ADVISOR_SYSTEM, subscriptionOnly = false, sessionId, resumeSessionId, signal, onRateLimit = () => {}, launch = spawn, executable = resolveClaudeExecutable() }) {
+function sendClaudeConsult({ prompt, workingDirectory, model = "sonnet", systemPrompt = ADVISOR_SYSTEM, subscriptionOnly = true, sessionId, resumeSessionId, signal, onRateLimit = () => {}, launch = spawn, executable = resolveClaudeExecutable() }) {
+  if(launch===spawn){require('./subscription-policy').assertSubscriptionBilling('claude');if(!subscriptionOnly)throw Error('Paid Claude access is disabled');}
   signal?.throwIfAborted();
   // Engineering turns keep a saved transcript so a later handoff resumes the same session. Still no tools.
   const session = resumeSessionId ? ["--resume", resumeSessionId] : sessionId ? ["--session-id", sessionId] : ["--no-session-persistence"];
   const args = ["-p", "--output-format", "stream-json", "--verbose", "--tools", "", "--strict-mcp-config", "--setting-sources", "", ...session, "--model", model, "--system-prompt", systemPrompt];
   return new Promise((resolve, reject) => {
-    const env = subscriptionOnly ? Object.fromEntries(Object.entries(process.env).filter(([key]) =>
-      !/^(ANTHROPIC_(API_KEY|AUTH_TOKEN|BASE_URL)|CLAUDE_CODE_(OAUTH_TOKEN|USE_BEDROCK|USE_VERTEX|USE_FOUNDRY))$/i.test(key))) : process.env;
+    const env = subscriptionOnly ? require('./subscription-runtime').subscriptionEnvironment() : process.env;
     const child = launch(executable, args, { cwd: workingDirectory || os.tmpdir(), windowsHide: true, shell: false, env, stdio: ["pipe", "pipe", "pipe"] });
     let stdout = "", stderr = "", settled = false;
     const finish = (error, value) => { if (settled) return; settled = true; clearTimeout(timeout); signal?.removeEventListener("abort", abort); error ? reject(error) : resolve(value); };

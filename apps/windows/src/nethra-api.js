@@ -203,7 +203,7 @@ class NethraApi {
       return {task:s.setProjectDocument(payload.id,payload.documentId,payload.documentRevision,payload.revision,requestId,this.readProjectDocument)};
     }
     if(type==='nethra.project'){
-      if(source!=='desktop')throw new Error('Assign projects in Junction on Windows');
+      if(source!=='desktop')throw new Error('Assign projects in Nethra on Windows');
       const {id,projectId,revision}=payload;
       return {task:s.assignProject(id,projectId,revision,requestId,key=>this.listProjects().some(project=>project.id===key))};
     }

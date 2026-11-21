@@ -2,7 +2,7 @@
 // Actual renderer, preload, IPC and SQLite; isolated profile and no network/inference.
 const {app}=require('electron');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
-const directory=fs.mkdtempSync(path.join(os.tmpdir(),'junction-p0-ui-'));
+const directory=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-p0-ui-'));
 app.setPath('userData',directory);
 global.fetch=async()=>{throw new Error('P0_UI_NETWORK_DISABLED');};
 require('../src/world-host-relay').WorldHostRelay.prototype.start=function(){};
@@ -15,7 +15,7 @@ app.on('browser-window-created',(_event,window)=>{
   window.webContents.once('did-finish-load',async()=>{
     try{
       const task=await window.webContents.executeJavaScript(`(async()=>{
-        const {task}=await window.junction.nethra('nethra.create',{goal:'P0 deletion fixture: funding research',persistent:false});
+        const {task}=await window.nethra.nethra('nethra.create',{goal:'P0 deletion fixture: funding research',persistent:false});
         showView('tasks');document.querySelector('.nav[data-view="tasks"]').click();
         return task;
       })()`);
@@ -43,7 +43,7 @@ app.on('browser-window-created',(_event,window)=>{
         const detail=document.querySelector('.task-detail');
         [...detail.querySelector('.task-head').querySelectorAll('button')].find(e=>e.textContent==='Delete').click();
         for(let i=0;i<200;i++){
-          const list=await window.junction.nethra('nethra.list');
+          const list=await window.nethra.nethra('nethra.list');
           if(!list.objectives.some(item=>item.id===${JSON.stringify(task.id)}))return {deleted:true,confirms};
           await new Promise(r=>setTimeout(r,25));
         }
@@ -53,7 +53,7 @@ app.on('browser-window-created',(_event,window)=>{
       const {NethraStore}=require('../src/nethra-store');
       const store=new NethraStore(path.join(directory,'nethra'));
       assert.equal(store.list().length,0);assert.equal(store.deletion(task.id).deleted,true);store.close();
-      const retained=await window.webContents.executeJavaScript(`window.junction.conversations()`);
+      const retained=await window.webContents.executeJavaScript(`window.nethra.conversations()`);
       assert.ok(retained.some(item=>item.id===task.conversationId));
       console.log(JSON.stringify({passed:true,...inspection,...result,conversationRetained:true,reopenedStoreStillDeleted:true,screenshot}));
       clearTimeout(deadline);app.exit(0);

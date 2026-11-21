@@ -66,5 +66,5 @@
   }
   const api = { SCENES, getScene, sceneTransform };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  else scope.JunctionScenes = api;
+  else scope.NethraScenes = api;
 })(typeof window === "undefined" ? globalThis : window);

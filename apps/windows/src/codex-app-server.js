@@ -21,7 +21,7 @@ class CodexAppServer {
     if (this.starting) return this.starting;
     if (this.process?.stdin?.writable) return;
     this.starting = new Promise((resolve, reject) => {
-      const child = this.launch(codexExecutable(), ["app-server", "-c", 'approval_policy="never"', "-c", "features.apps=false", "-c", "features.hooks=false", "-c", "features.multi_agent=false", "-c", "mcp_servers={}", "-c", 'web_search="disabled"', "-c", 'shell_environment_policy.inherit="core"'], { cwd: this.cwd, windowsHide: true, shell: false, stdio: ["pipe", "pipe", "pipe"] });
+      const child = this.launch(codexExecutable(), ["app-server", "-c", 'forced_login_method="chatgpt"', "-c", 'model_provider="openai"', "-c", 'approval_policy="never"', "-c", "features.apps=false", "-c", "features.hooks=false", "-c", "features.multi_agent=false", "-c", "mcp_servers={}", "-c", 'web_search="disabled"', "-c", 'shell_environment_policy.inherit="core"'], { cwd: this.cwd, windowsHide: true, shell: false, env:require('./subscription-runtime').subscriptionEnvironment(), stdio: ["pipe", "pipe", "pipe"] });
       this.process = child;
       const fail = error => { this.stop(); reject(error instanceof Error ? error : new Error(String(error))); };
       child.once("error", fail);
@@ -35,7 +35,7 @@ class CodexAppServer {
         for (const listener of [...this.listeners]) listener({ method: "transport/closed", error });
       });
       readline.createInterface({ input: child.stdout }).on("line", line => this.receive(line));
-      this.request("initialize", { clientInfo: { name: "junction", title: "Junction", version: "0.1.0" }, capabilities: { experimentalApi: true } })
+      this.request("initialize", { clientInfo: { name: "nethra", title: "Nethra", version: "0.1.0" }, capabilities: { experimentalApi: true } })
         .then(() => { this.notify("initialized", {}); resolve(); })
         .catch(fail);
     });
@@ -70,6 +70,7 @@ class CodexAppServer {
   }
 
   async run({ threadId, cwd, prompt, model, readOnly = false, onProgress = () => {}, onTurnStarted = () => {}, handoffAtCapacity, signal }) {
+    if(this.launch===spawn)require('./subscription-policy').assertSubscriptionBilling('codex');
     if (signal?.aborted) throw new Error("Paused");
     await this.start();
     if (signal?.aborted) throw new Error("Paused");

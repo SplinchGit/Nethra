@@ -2,7 +2,7 @@
 
 const crypto = require("node:crypto");
 
-const Provenance = Object.freeze({ OWNER: "OWNER", JUNCTION: "JUNCTION", UNTRUSTED: "UNTRUSTED" });
+const Provenance = Object.freeze({ OWNER: "OWNER", NETHRA: "NETHRA", UNTRUSTED: "UNTRUSTED" });
 const Decision = Object.freeze({ AUTO: "auto", CONFIRMED: "confirmed", REJECTED: "rejected", BLOCKED: "blocked" });
 
 const CAPABILITIES = Object.freeze({

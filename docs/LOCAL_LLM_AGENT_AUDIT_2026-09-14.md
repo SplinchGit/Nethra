@@ -1,8 +1,8 @@
-# Junction local-LLM agent audit — 2026-09-14
+# Nethra local-LLM agent audit — 2026-09-14
 
 ## Outcome
 
-Junction now has a real native Ollama tool loop for Local Agent mode. A model action is executable only when Ollama returns `message.tool_calls`; ordinary text such as “Searching…” is never parsed as an action. Windows and Android Agent mode both enter the same PC-side `LocalAgentRuntime` and central capability registry, while ordinary non-Agent local chat remains a deliberately tool-free direct Ollama path.
+Nethra now has a real native Ollama tool loop for Local Agent mode. A model action is executable only when Ollama returns `message.tool_calls`; ordinary text such as “Searching…” is never parsed as an action. Windows and Android Agent mode both enter the same PC-side `LocalAgentRuntime` and central capability registry, while ordinary non-Agent local chat remains a deliberately tool-free direct Ollama path.
 
 The recommended default for this i7-6700K / 12 GB PC is `qwen3.5:2b`. Existing saved selections are preserved and all four models remain selectable.
 
@@ -10,7 +10,7 @@ The recommended default for this i7-6700K / 12 GB PC is `qwen3.5:2b`. Existing s
 
 Android Local LLM uses this path:
 
-1. `ChatScreen` supplies the selected provider and model. When the Tools mode contributes the `junction_local_agent` signal, `JunctionPcProvider` writes encrypted `{model,messages,mode:"agent"}` to the paired brain's Firestore command document.
+1. `ChatScreen` supplies the selected provider and model. When the Tools mode contributes the `nethra_local_agent` signal, `NethraPcProvider` writes encrypted `{model,messages,mode:"agent"}` to the paired brain's Firestore command document.
 2. The Windows `LocalBrainRelay` polls that command collection, validates the source/client/expiry, leases the command, decrypts it, and calls the injected `runLocalAgent` function for `mode === "agent"`.
 3. `main.js` injects the one desktop `LocalAgentRuntime`, backed by one `LocalAgentToolRegistry` and the existing `ResearchCoordinator`/`WebResearchClient`.
 4. The runtime sends the selected model, bounded messages, and native tool schemas to Ollama `/api/chat`.
@@ -67,9 +67,9 @@ Vanilla smoke test used a deterministic `get_weather(city)` function returning L
 | `qwen3.5:4b` | ~2.90 GB before failure | 43.1 tok/s | 5.0 tok/s | 24.5 s | FAIL; correct call, then `std::bad_alloc` on result turn |
 | `lfm2.5:2.6b` | ~1.82 GB | 69.5 tok/s | 8.9 tok/s | 14.7 s | PASS; final at 22.7 s |
 
-Actual Junction behavior:
+Actual Nethra behavior:
 
-| Model | Protected Junction search | Multi-step agent |
+| Model | Protected Nethra search | Multi-step agent |
 | --- | --- | --- |
 | `qwen3:1.7b` | Tool execution proved; one-search London run completed, but ignored citation correction | Executed both city searches, then repeated them and ended with the duplicate-block result: task-quality FAIL |
 | `qwen3.5:2b` | PASS: London, 1 search / 2 iterations / valid citations / ~37 s | PASS: London then Edinburgh, 2 searches / 3 iterations / valid citations / ~84 s |
@@ -78,7 +78,7 @@ Actual Junction behavior:
 
 The Burj Khalifa control returned the correct 828 m fact. Both tested Qwen models attempted unnecessary searches; Qwen 3.5 2B's semantic-expansion queries were initially blocked by egress validation and it recovered to answer from knowledge. The egress vocabulary now permits harmless height/measurement and weather synonyms without permitting URLs, IPs, email addresses, secret-like tokens, or ungrounded private terms.
 
-Raw reproducible records are under `apps/windows/test-results/`; harnesses are `scripts/ollama-tool-smoke.js` and `scripts/junction-agent-smoke.js`.
+Raw reproducible records are under `apps/windows/test-results/`; harnesses are `scripts/ollama-tool-smoke.js` and `scripts/nethra-agent-smoke.js`.
 
 ## UI and model swapping
 
@@ -88,7 +88,7 @@ Changing the selection changes only the model string sent to Ollama. The runtime
 
 ## Manual Android acceptance tests
 
-1. Start Junction and Ollama on the signed-in PC; confirm the phone shows the paired PC online.
+1. Start Nethra and Ollama on the signed-in PC; confirm the phone shows the paired PC online.
 2. In Android Chat, open the provider/model dropdown, choose Local LLM → Qwen 3.5 2B, close/reopen the dropdown, and confirm the selection persists.
 3. Enable Agent/Tools. Ask `What's the weather like in London right now?` Confirm activity progresses through the PC and the answer contains current cited sources. On PC Audit, confirm `agent_tool_requested web_search`, `agent_tool_result web_search`, then `agent_final` in order.
 4. Disable Agent/Tools and ask the same question. Confirm ordinary chat does not claim it searched and that no web-search audit row appears.

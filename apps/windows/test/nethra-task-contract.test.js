@@ -10,7 +10,7 @@ function fixture(t){
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-contract-'));
   const store=new NethraStore(directory);
   t.after(()=>{store.close();fs.rmSync(directory,{recursive:true,force:true});});
-  return {store,create:input=>store.create({goal:'Prepare workshop notes',model:'junction-qwen3-next:80b-q3km',continuous:true,conversationId:'owner-chat',...input})};
+  return {store,create:input=>store.create({goal:'Prepare workshop notes',model:'nethra-qwen3-next:80b-q3km',continuous:true,conversationId:'owner-chat',...input})};
 }
 function runtimeFor(actions,observe=()=>{}){
   let index=0;
@@ -88,7 +88,7 @@ test('host diagnostics describe the task model rather than a fixed 30B identity'
   const {store,create}=fixture(t),task=create({});
   const tools=new NethraTools({store,codexStatus:async()=>({ready:false}),claudeStatus:async()=>({ready:false})});
   const result=await tools.execute('host_diagnostics',{},task);
-  assert.equal(result.model.model,'junction-qwen3-next:80b-q3km');
+  assert.equal(result.model.model,'nethra-qwen3-next:80b-q3km');
   assert.equal(result.model.thinking,false);
   assert.equal(result.model.objectiveThinkingBudgetTokens,0);
 });
@@ -97,7 +97,7 @@ test('advisor context uses the same task model facts as the worker',async t=>{
   const {store,create}=fixture(t),task=create({allowCodeWork:true});let prompt;
   const tools=new NethraTools({store,codexStatus:async()=>({ready:true}),advisorLimits:{check:async()=>({available:true}),invalidate:()=>{}},codexConsult:async request=>{prompt=request.messages[0].content;return {content:'Read-only advice'};}});
   await tools.execute('consult_codex',{question:'Review the current task context.'},task);
-  assert.match(prompt,/junction-qwen3-next:80b-q3km/);
+  assert.match(prompt,/nethra-qwen3-next:80b-q3km/);
   assert.ok(!prompt.includes('runs qwen3:30b'));
 });
 

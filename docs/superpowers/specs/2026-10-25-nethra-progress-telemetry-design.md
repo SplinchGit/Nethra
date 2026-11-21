@@ -6,7 +6,7 @@ Nethra should be able to inspect measured performance on its Windows host withou
 
 ## Approach
 
-Use a native, read-only performance report assembled from Junction's saved local chat usage and Nethra's own recorded inference calls. Expose it through an objective tool and the task detail API. Present the task itself as a progress-first view: current state and next action, completed-plan count, a short host-recorded activity timeline, then a compact performance card. This is preferable to exporting a metrics file (which can go stale) or making a large chart dashboard the primary task view (which obscures actions and blockers).
+Use a native, read-only performance report assembled from Nethra's saved local chat usage and Nethra's own recorded inference calls. Expose it through an objective tool and the task detail API. Present the task itself as a progress-first view: current state and next action, completed-plan count, a short host-recorded activity timeline, then a compact performance card. This is preferable to exporting a metrics file (which can go stale) or making a large chart dashboard the primary task view (which obscures actions and blockers).
 
 ## Boundaries
 

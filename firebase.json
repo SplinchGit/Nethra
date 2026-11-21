@@ -8,8 +8,8 @@
       "source": "services/functions"
     },
     {
-      "source": "services/junction-functions",
-      "codebase": "junction",
+      "source": "services/nethra-functions",
+      "codebase": "nethra",
       "disallowLegacyRuntimeConfig": true,
       "ignore": [
         "node_modules",

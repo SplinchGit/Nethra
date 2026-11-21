@@ -4,10 +4,10 @@ const path = require("node:path");
 
 // Same vocabulary as Android's AppearancePrefs so both apps describe one appearance system.
 const MODES = ["system", "light", "dark"];
-const PALETTES = ["junction", "sakura", "moss", "lavender", "peach", "mint", "sky", "butter"];
+const PALETTES = ["nethra", "sakura", "moss", "lavender", "peach", "mint", "sky", "butter"];
 const ARTWORK = ["none", "sakura-mountain", "sakura-waterfall", "sakura-airport", "sakura-city"];
 const MOTION = ["system", "reduced", "full"];
-const DEFAULTS = Object.freeze({ mode: "system", palette: "junction", artwork: "none", backgroundIntensity: 55, petals: true, petalIntensity: 35, motion: "system" });
+const DEFAULTS = Object.freeze({ mode: "system", palette: "nethra", artwork: "none", backgroundIntensity: 55, petals: true, petalIntensity: 35, motion: "system" });
 
 function validate(value) {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid appearance");

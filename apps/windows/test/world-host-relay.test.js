@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { test } = require("node:test");
 const { WorldHostRelay } = require("../src/world-host-relay");
 
-const event = { id: "550e8400-e29b-41d4-a716-446655440010", occurredAt: new Date().toISOString(), category: "WAKE", summary: "Junction World woke." };
+const event = { id: "550e8400-e29b-41d4-a716-446655440010", occurredAt: new Date().toISOString(), category: "WAKE", summary: "Nethra World woke." };
 
 test("host relay polls only the fixed loopback guest route and validates audit output", async () => {
   const requests = []; let appended = 0;

@@ -82,8 +82,8 @@ test('continuous toggle saves during an active pass and changes sleeping ongoing
 
 test('Codex development drafts require a Windows opt-in on the objective',async t=>{
   const f=fixture(t);
-  await assert.rejects(f.api.dispatch('nethra.create',{goal:'Improve Junction',allowCodeWork:true},'code-phone','android'),/Windows/);
-  const {task}=await f.api.dispatch('nethra.create',{goal:'Improve Junction'},'code-create','desktop');
+  await assert.rejects(f.api.dispatch('nethra.create',{goal:'Improve Nethra',allowCodeWork:true},'code-phone','android'),/Windows/);
+  const {task}=await f.api.dispatch('nethra.create',{goal:'Improve Nethra'},'code-create','desktop');
   assert.equal(task.allowCodeWork,false);
   await assert.rejects(f.api.dispatch('nethra.configure',{id:task.id,revision:task.revision,allowCodeWork:true},'code-phone-config','android'),/Windows/);
   const enabled=await f.api.dispatch('nethra.configure',{id:task.id,revision:task.revision,allowCodeWork:true},'code-enable','desktop');

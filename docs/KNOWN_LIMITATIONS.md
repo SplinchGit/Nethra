@@ -14,14 +14,14 @@ business decision, or a licensed dependency) that blocks it.
 Not implemented. A real wake-word detector needs either a licensed model (Porcupine, Snowboy-style)
 or a custom-trained TFLite model plus a continuous low-power audio pipeline, and the spec itself
 frames this as a "Then:" (future) item, not a Phase 2 requirement — side-key summon and the
-persistent overlay (`summon/JunctionOverlayService.kt`, `accessibility/JunctionAccessibilityService.kt`)
+persistent overlay (`summon/NethraOverlayService.kt`, `accessibility/NethraAccessibilityService.kt`)
 cover the "Now:" requirement. Adding a wake-word engine is a business decision (which vendor,
 what it costs, on-device model size) as much as an engineering one.
 
 ## Bixby remap (Phase 2.C)
 
 Not implemented. Double-press volume-down summon exists and is opt-in
-(`JunctionAccessibilityService.onKeyEvent`). Remapping Bixby specifically has no public Android API —
+(`NethraAccessibilityService.onKeyEvent`). Remapping Bixby specifically has no public Android API —
 it requires Samsung's own Good Lock / Bixby Routines integration, which varies by OEM software
 version and isn't something a generic Android client can hook into from outside.
 
@@ -31,7 +31,7 @@ Not implemented. `set_text` uses `AccessibilityNodeInfo.ACTION_SET_TEXT`, which 
 Android widgets. A bundled `InputMethodService` (the spec's suggested fallback for apps where that
 proves flaky) is a full standalone keyboard subsystem — its own UI, IME lifecycle, security review
 surface — and is only worth building once real per-app failure data justifies it. `ToolRegistry.kt`'s
-selector-tier logging (`JunctionAccessibilityService.locate()`) is in place specifically to gather
+selector-tier logging (`NethraAccessibilityService.locate()`) is in place specifically to gather
 that evidence first.
 
 ## Fully silent Shizuku install (Phase 4.1)

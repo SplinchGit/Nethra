@@ -2,7 +2,7 @@
 const { normalizeLocalModel } = require("./model-catalog");
 
 const crypto = require("node:crypto");
-const LOCAL_SOURCE = "junction_local_llm_v2";
+const LOCAL_SOURCE = "nethra_local_llm_v2";
 const POLL_INTERVAL_MS = 15_000;
 const LEASE_MS = 90_000;
 const OLLAMA_TIMEOUT_MS = 120_000;
@@ -42,7 +42,7 @@ function fields(value) {
 }
 function crypt(key, aad, input, nonce, encrypt) {
   const material = Buffer.isBuffer(key) ? key : Buffer.from(key, "base64url");
-  if (material.length !== 32) throw new Error("Invalid Local Junction pairing key.");
+  if (material.length !== 32) throw new Error("Invalid Local Nethra pairing key.");
   const iv = nonce || crypto.randomBytes(12);
   const cipher = encrypt ? crypto.createCipheriv("aes-256-gcm", material, iv) : crypto.createDecipheriv("aes-256-gcm", material, iv);
   cipher.setAAD(Buffer.from(aad));
@@ -77,7 +77,7 @@ class LocalBrainRelay {
     if (!response.ok) {
       const detail = body?.error || (Array.isArray(body) ? body.find(item => item.error)?.error : null);
       if (response.status === 429 || detail?.status === "RESOURCE_EXHAUSTED") this.retryAfter = this.now() + 5 * 60_000;
-      throw Object.assign(new Error(detail?.message || `Junction relay request failed (${response.status}).`), { status: response.status });
+      throw Object.assign(new Error(detail?.message || `Nethra relay request failed (${response.status}).`), { status: response.status });
     }
     return body || {};
   }
@@ -130,7 +130,7 @@ class LocalBrainRelay {
     await this.update(item.document, state.session, { status: "active" }, item.document.updateTime);
   }
   systemPrompt({ allowCodeDelegation = false } = {}) {
-    return ["You are Nethra, the owner's personal agent, answering through the Junction app.", "You are running on the owner's paired Windows PC through an encrypted relay. You have no direct computer, network, scheduling, or source-code tools.", "Answer ordinary questions directly and concisely. Never claim that you changed files, searched the web, scheduled work, or ran a tool.", allowCodeDelegation ? "This is an explicitly approved development request. State the full owner-named file, folder or repository and requested outcome on the first line exactly as JUNCTION_CODE_TASK:. The PC will start a durable scoped work session immediately." : "Development starts only from a clear owner instruction that names its local scope."].filter(Boolean).join("\n\n");
+    return ["You are Nethra, the owner's personal agent, answering through the Nethra app.", "You are running on the owner's paired Windows PC through an encrypted relay. You have no direct computer, network, scheduling, or source-code tools.", "Answer ordinary questions directly and concisely. Never claim that you changed files, searched the web, scheduled work, or ran a tool.", allowCodeDelegation ? "This is an explicitly approved development request. State the full owner-named file, folder or repository and requested outcome on the first line exactly as NETHRA_CODE_TASK:. The PC will start a durable scoped work session immediately." : "Development starts only from a clear owner instruction that names its local scope."].filter(Boolean).join("\n\n");
   }
   async markError(state, item, error) {
     const message = String(error?.message || error || "Local model request failed.").slice(0, 300);
@@ -149,7 +149,7 @@ class LocalBrainRelay {
       const plaintext = crypt(state.key, `JBP1|${state.brainId}|${id}|request`, Buffer.from(item.data.ciphertext, "base64url"), Buffer.from(item.data.nonce, "base64url"), false);
       const payload = JSON.parse(plaintext);
       if(payload.mode==='agent_api'){
-        if(!this.dispatchAgent)throw new Error('Update Junction Windows to use Nethra');
+        if(!this.dispatchAgent)throw new Error('Update Nethra Windows to use Nethra');
         const requestId=`nethra-${payload.requestId||id}`;
         const result=await this.dispatchAgent(payload.type,payload.payload||{},requestId);
         const encrypted=crypt(state.key,`JBP1|${state.brainId}|${id}|response`,Buffer.from(JSON.stringify(result)),null,true);
@@ -157,7 +157,7 @@ class LocalBrainRelay {
         return;
       }
       if (payload.mode === "conversation_sync") {
-        if (!this.syncConversations) throw new Error("Update Junction on the PC to enable paired conversation sync.");
+        if (!this.syncConversations) throw new Error("Update Nethra on the PC to enable paired conversation sync.");
         const result = await this.syncConversations(payload);
         const encrypted = crypt(state.key, `JBP1|${state.brainId}|${id}|response`, Buffer.from(JSON.stringify(result)), null, true);
         await this.update(item.document, state.session, { status: "done", responseCiphertext: encrypted.ciphertext, responseNonce: encrypted.nonce, leaseUntilMs: 0 }, null);
@@ -217,10 +217,10 @@ class LocalBrainRelay {
       }
       answer = answer.trim();
       if (!answer) throw new Error("Local model returned an empty response.");
-      const task = answer.match(/^JUNCTION_CODE_TASK:\s*(.+)/im)?.[1]?.trim();
+      const task = answer.match(/^NETHRA_CODE_TASK:\s*(.+)/im)?.[1]?.trim();
       if (task && allowCodeDelegation && this.createCodeDelegation) {
         const plan = await this.createCodeDelegation(task);
-        answer = `${plan.response || "Persistent work started on the named scope."}\n\n${answer.replace(/^JUNCTION_CODE_TASK:\s*.+\n?/im, "").trim()}`.trim();
+        answer = `${plan.response || "Persistent work started on the named scope."}\n\n${answer.replace(/^NETHRA_CODE_TASK:\s*.+\n?/im, "").trim()}`.trim();
         if (plan?.id) answer += `\n\nWork session: ${plan.id.slice(0, 8)}`;
       }
       const response = crypt(state.key, `JBP1|${state.brainId}|${id}|response`, Buffer.from(answer.slice(0, MAX_RESPONSE_CHARS)), null, true);

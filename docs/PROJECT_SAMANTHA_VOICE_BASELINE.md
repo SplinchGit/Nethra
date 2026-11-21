@@ -1,6 +1,6 @@
 # M6 voice baseline
 
-Record the Android build SHA, phone model, recognition engine, audio route, and background noise conditions. Use the paired local voice route. Hold those settings constant for any repeat run. Use synthetic prompts and capture only the JunctionVoice stage markers.
+Record the Android build SHA, phone model, recognition engine, audio route, and background noise conditions. Use the paired local voice route. Hold those settings constant for any repeat run. Use synthetic prompts and capture only the NethraVoice stage markers.
 
 Run 25 rounds of these four scenarios, using a fresh turn for each scenario. Note the start and end time of each trial. Count an attempted turn even when it fails. Repeat only invalid trials, such as an unrelated app taking the microphone, and record the reason separately.
 
@@ -13,7 +13,7 @@ Run 25 rounds of these four scenarios, using a fresh turn for each scenario. Not
 
 Use the companion voice tooling or collect the stage log with:
 
-    adb logcat -v threadtime JunctionVoice:I '*:S'
+    adb logcat -v threadtime NethraVoice:I '*:S'
 
 For each scenario report attempted turns, turns that matched the expected behavior, barge-ins, and barge-ins with a subsequent empty recognition or recognizer failure. Count stage=bargein_no_transcript lines for the last metric. Report the subset with reply_interrupted=true separately. Also record any audible reply that truncated and did not resume. A trace marker identifies interrupted playback. The listening observation establishes whether the reply was lost.
 

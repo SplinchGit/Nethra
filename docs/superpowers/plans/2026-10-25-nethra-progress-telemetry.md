@@ -49,7 +49,7 @@
 
 ### Task 3: Verified activity and task UI
 
-**Files:** `apps/windows/src/nethra-progress.js`, `apps/windows/renderer/nethra.js`, `apps/windows/renderer/appearance.css`, `apps/android/src/main/java/com/splinch/junction/feature/projects/NethraPanel.kt`, focused Windows/Android tests.
+**Files:** `apps/windows/src/nethra-progress.js`, `apps/windows/renderer/nethra.js`, `apps/windows/renderer/appearance.css`, `apps/android/src/main/java/com/splinch/nethra/feature/projects/NethraPanel.kt`, focused Windows/Android tests.
 
 **Interfaces:** `progress.activity` is a bounded list of host events with time, label and kind; both screens render it alongside state, next action and measured performance.
 

@@ -1,35 +1,35 @@
-# Junction
+# Nethra
 
-Junction now includes the Windows Nethra runtime: local Ollama inference, durable objectives,
+Nethra now includes the Windows Nethra runtime: local Ollama inference, durable objectives,
 bounded scheduled work, and paired Android access over LAN or an encrypted relay. The phone
 does not need to remain open for authorised Windows objectives to continue. See the
 [24 October continuation report](docs/NETHRA_CONTINUATION_2026-10-24.md) for verification and gaps.
 
-Current verification: [feature catalogue, test results and open findings](docs/audit/2026-09-27-feature-review.md). Music is now [Junction DAW](https://github.com/SplinchGit/Junction-DAW); Mafioso Android is in its [own repository PR](https://github.com/SplinchGit/Mafioso/pull/1).
+Current verification: [feature catalogue, test results and open findings](docs/audit/2026-09-27-feature-review.md). Music is now [Nethra DAW](https://github.com/SplinchGit/Nethra-DAW); Mafioso Android is in its [own repository PR](https://github.com/SplinchGit/Mafioso/pull/1).
 
-[![Download APK](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsplinchgit.github.io%2FJunction%2Flatest.json&query=%24.version&prefix=%E2%AC%87%20&label=DOWNLOAD%20APK&color=4f7cff&style=for-the-badge)](https://splinchgit.github.io/Junction/junction-debug.apk)
+[![Download APK](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fsplinchgit.github.io%2FNethra%2Flatest.json&query=%24.version&prefix=%E2%AC%87%20&label=DOWNLOAD%20APK&color=4f7cff&style=for-the-badge)](https://splinchgit.github.io/Nethra/nethra-debug.apk)
 
 That button is the whole install, and the version on its face is read live from the build it is
 serving — not typed here. It downloads the APK itself: no landing page, no picking a file. Every push
 to `main` overwrites it in place at a URL that never changes, so it is always the newest build, and
 it is the only download link in this README on purpose.
 
-You should only ever need it once. After that Junction updates itself: it checks the same URL, and
+You should only ever need it once. After that Nethra updates itself: it checks the same URL, and
 installs over itself keeping your API keys, chat history and memory. Same app, same key, one version.
 
-[![APK build](https://img.shields.io/github/actions/workflow/status/SplinchGit/Junction/android-build.yml?branch=main&style=flat-square&label=APK%20build)](https://github.com/SplinchGit/Junction/actions/workflows/android-build.yml)
-[![Updated](https://img.shields.io/github/last-commit/SplinchGit/Junction/main?style=flat-square&label=main%20updated)](https://github.com/SplinchGit/Junction/commits/main)
+[![APK build](https://img.shields.io/github/actions/workflow/status/SplinchGit/Nethra/android-build.yml?branch=main&style=flat-square&label=APK%20build)](https://github.com/SplinchGit/Nethra/actions/workflows/android-build.yml)
+[![Updated](https://img.shields.io/github/last-commit/SplinchGit/Nethra/main?style=flat-square&label=main%20updated)](https://github.com/SplinchGit/Nethra/commits/main)
 
 Status, not downloads — and live rather than written down, so they cannot go stale. If "APK build" is
 not passing, the button is still serving the last APK that built successfully, which will be older
-than `main`. Installing it over an older Junction keeps your API keys, chat history and memory: every
+than `main`. Installing it over an older Nethra keeps your API keys, chat history and memory: every
 published build is signed with the same key and carries a higher version code than the one before.
 
 An Android-native assistant that acts on your phone under trust you control and can audit. It reads
 the screen, replies to messages, manages email, and drives apps — always with a client-side trust
 gate between "the model wants to do X" and "X actually happens."
 
-## What Junction is (and isn't)
+## What Nethra is (and isn't)
 
 - **API providers or a paired Windows model; no phone LLM.** You can use local Ollama on the paired PC, or bring a key for Claude, OpenAI, DeepSeek, or any
   OpenAI-compatible endpoint. Chat and tool-calling run entirely against that provider from the
@@ -61,7 +61,7 @@ itself — everything else in the v2 build spec is implemented.
 
 ## Injection architecture (summary)
 
-Junction reads content it didn't write — emails, notifications, on-screen text — while holding the
+Nethra reads content it didn't write — emails, notifications, on-screen text — while holding the
 ability to send messages and take actions. That's the classic untrusted-input + capability
 combination, and it's treated as a first-class design problem rather than a prompt-wording issue:
 
@@ -71,7 +71,7 @@ combination, and it's treated as a first-class design problem rather than a prom
   and any instruction-shaped content inside it surfaces as an observation (`contentRequests`), not
   as something the actor lane can act on.
 - **Provenance tagging.** Every context block, chat message, feed item, plan, and audit row carries
-  `OWNER` / `JUNCTION` / `UNTRUSTED` provenance. It's never stripped or upgraded — a summary of
+  `OWNER` / `NETHRA` / `UNTRUSTED` provenance. It's never stripped or upgraded — a summary of
   untrusted content is still untrusted, transitively.
 - **Trigger provenance.** Only an `OWNER`-triggered turn may initiate a state-changing tool call —
   enforced as a hard check in `TrustGate`, not a convention. A proactive digest check or an
@@ -89,7 +89,7 @@ attempted injections as a first-class metric (`ActionAuditMetrics.injectionDetec
 `remember_fact`/`forget_fact` let the assistant store a fact the owner explicitly stated or
 repeated (never something merely read from untrusted content) — capped at 200, reviewable and
 individually deletable under Settings > Memory. Stored facts are replayed into future context as
-`JUNCTION`-provenance state, so they inform responses but — like everything else with that
+`NETHRA`-provenance state, so they inform responses but — like everything else with that
 provenance tag — can never themselves initiate a tool call.
 
 ## What works today
@@ -118,10 +118,10 @@ provenance tag — can never themselves initiate a tool call.
 - Optional Firebase sync (chat/feed/prefs) and a browser companion (`apps/web`) that mirrors
   conversations read-only — it cannot execute tools; anything it sends is tagged `UNTRUSTED`.
   This is separate from the Windows app below, which is a full host.
-- **Junction for Windows (Nethra)** — see the next section. It is not a read-only companion: it
+- **Nethra for Windows (Nethra)** — see the next section. It is not a read-only companion: it
   runs local inference, durable objectives and a scheduler on the owner's PC.
 
-## Junction for Windows and Nethra
+## Nethra for Windows and Nethra
 
 `apps/windows` is an Electron app that hosts **Nethra**, the owner's single local agent, on the
 Windows PC. Inference runs on the PC through Ollama (`qwen3:30b`, the Qwen3-30B-A3B-Thinking-2507
@@ -153,8 +153,8 @@ status: [`docs/NETHRA_DELIVERY_2026-10-25.md`](docs/NETHRA_DELIVERY_2026-10-25.m
 3. Optional, for OpenAI Realtime voice specifically: add the Functions/server endpoint in Settings
    or `local.properties`:
    ```
-   JUNCTION_REALTIME_ENDPOINT=https://<region>-<project>.cloudfunctions.net/realtimeSdpExchange
-   JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT=https://<region>-<project>.cloudfunctions.net/realtimeClientSecret
+   NETHRA_REALTIME_ENDPOINT=https://<region>-<project>.cloudfunctions.net/realtimeSdpExchange
+   NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT=https://<region>-<project>.cloudfunctions.net/realtimeClientSecret
    ```
    Or skip all of this and use the on-device voice backend (Settings > Voice backend), which needs
    none of it.
@@ -166,7 +166,7 @@ Everything above works with Firebase untouched. This section is only for opting 
 sync of chat/feed/prefs.
 
 1. Firebase Console: create or select the project.
-2. Project settings -> Your apps -> Add app (Android), package `com.splinch.junction`.
+2. Project settings -> Your apps -> Add app (Android), package `com.splinch.nethra`.
 3. Download `google-services.json` to `apps/android/google-services.json`.
 4. Add SHA fingerprints (SHA-1 required, SHA-256 recommended).
 5. Authentication -> Sign-in method: enable Google.
@@ -223,7 +223,7 @@ Firebase user:
 - Server env per provider: `GOOGLE_CLIENT_ID`/`SECRET`, `SLACK_CLIENT_ID`/`SECRET`,
   `GITHUB_CLIENT_ID`/`SECRET`, `NOTION_CLIENT_ID`/`SECRET`.
 - Redirect URI: `${PUBLIC_BASE_URL}/integrations/<provider>/callback`.
-- App deep link on success: `junction://oauth-callback?provider=<provider>&status=connected`.
+- App deep link on success: `nethra://oauth-callback?provider=<provider>&status=connected`.
 - Endpoints: `POST /integrations/<provider>/start|sync|disconnect`.
 
 ## Admin (single-owner)
@@ -240,7 +240,7 @@ Settings > Voice backend chooses:
 
 A voice call has one visible control: **Start voice call** begins speech and listening together; **End call** stops both. A call timer (monotonic clock) shows connecting, active, reconnecting and ended states. The local backend runs a continuous listen → reply → speak → listen loop, while still leaving typed input available. Each turn tells the model whether a call is live, whether the message was spoken or typed, and whether the reply will be spoken; this state is never stored as memory.
 
-**Spoken approval (on-device backend only).** When a plan needs approval during an owner-started local call, Junction reads an exact disclosure aloud (for an email: recipient and text) and asks for a specific phrase such as “send it”. The approval is bound to that one plan and disclosure, expires after 45 seconds, can be used once, is rejected if it overlaps Junction's own speech, and is recorded in chat and the audit log. A voice-approved email is re-read from Gmail at send time and is not sent if its recipient or text changed. Speech recognition is not speaker verification. Code changes and merges, installs, notification replies, screen automation, settings changes and anything not on the eligible list keep on-screen approval. This needs physical-device verification.
+**Spoken approval (on-device backend only).** When a plan needs approval during an owner-started local call, Nethra reads an exact disclosure aloud (for an email: recipient and text) and asks for a specific phrase such as “send it”. The approval is bound to that one plan and disclosure, expires after 45 seconds, can be used once, is rejected if it overlaps Nethra's own speech, and is recorded in chat and the audit log. A voice-approved email is re-read from Gmail at send time and is not sent if its recipient or text changed. Speech recognition is not speaker verification. Code changes and merges, installs, notification replies, screen automation, settings changes and anything not on the eligible list keep on-screen approval. This needs physical-device verification.
 
 Voice settings show the engine, voice, locale and whether synthesis is local or network for the most recent utterance. The Azure voice stays the same Ollie voice by default and is now requested at 48 kHz / 192 kbps unless you saved another quality; the HD Ollie variant, other on-device voices and lower bitrates are opt-in, with previews. Azure bills per character, not by audio quality.
 ## Privacy posture
@@ -255,23 +255,23 @@ Voice settings show the engine, voice, locale and whether synthesis is local or 
 ## Update pipeline / direct APK releases
 
 **One URL, always the newest build:**
-`https://splinchgit.github.io/Junction/junction-debug.apk` is the APK file itself, not a page about
+`https://splinchgit.github.io/Nethra/nethra-debug.apk` is the APK file itself, not a page about
 it. The `publish-pages` job in `Build Android APK` (`.github/workflows/android-build.yml`) overwrites
 it on every push to `main`, so the link is permanent and its contents are whatever `main` last built.
 The README button points straight at it; nothing else in this README downloads anything.
 
 Three companion files sit next to it, deliberately not linked above so there is only ever one thing
-to tap: `junction-debug.apk.sha256` (checksum of the exact file being served), `index.html` (a page
+to tap: `nethra-debug.apk.sha256` (checksum of the exact file being served), `index.html` (a page
 stating version, build date, commit and SHA-256 of that same file), and `latest.json` (the same facts
 as machine-readable JSON).
 
 **`latest.json` is what makes updates seamless.** `UpdateChecker` fetches it and compares
-`versionCode` against `BuildConfig.JUNCTION_VERSION_CODE`; if the published build is higher,
+`versionCode` against `BuildConfig.NETHRA_VERSION_CODE`; if the published build is higher,
 `UpdateInstaller` downloads the APK, verifies it against the published SHA-256, backs up the
 currently installed APK for one-tap rollback, and hands it to Android's installer. Because that is
 the *same* file the button serves, signed with the *same* key, it installs over the running app and
 keeps API keys, chat history, durable memory and your permission grants. You tap the README button
-once, ever; after that Junction updates itself.
+once, ever; after that Nethra updates itself.
 
 This deliberately replaced a check against GitHub Releases, which was broken two ways. Releases were
 built from `v*` tags by a separate `Android Release` workflow and signed with a *different* key, so
@@ -281,7 +281,7 @@ And the comparison was on `versionName`, a hand-edited string that stays `0.5.0`
 builds, so no published build ever looked newer in the first place.
 
 That workflow has been deleted, along with the second signing key it needed. There is now one
-Junction: one artifact, one key, one URL, one version code that only goes up. Two distribution
+Nethra: one artifact, one key, one URL, one version code that only goes up. Two distribution
 channels signed with two keys is not a richer release process — on Android it is just a guarantee
 that one of them can never update the other.
 
@@ -307,23 +307,23 @@ with a key that isn't public — and keep it backed up, because losing it breaks
 who installed a build signed with it.
 
 Version codes come from CI, not from a hand-edited constant. `versionCode` is
-`JUNCTION_VERSION_CODE` when the environment sets it and the workflow passes the run number, so every
+`NETHRA_VERSION_CODE` when the environment sets it and the workflow passes the run number, so every
 published build outranks the one before it and installs cleanly over it. Local builds fall back to
 the checked-in baseline.
 
 One caveat remains for anyone building locally: `connectedDebugAndroidTest` against a phone that has
-Junction installed replaces the install, with the same data loss, because the instrumentation build
+Nethra installed replaces the install, with the same data loss, because the instrumentation build
 does not carry the published version code.
 
-## Junction changing its own code
+## Nethra changing its own code
 
-Junction can inspect its own fixed GitHub repository, `SplinchGit/Junction`, using a fine-grained token stored in the encrypted Android key store. It is deliberately a **referential** source view: Junction lists the tree and reads only the folders/files relevant to the change at hand. It does not clone the repository or attach it to ordinary chat context.
+Nethra can inspect its own fixed GitHub repository, `SplinchGit/Nethra`, using a fine-grained token stored in the encrypted Android key store. It is deliberately a **referential** source view: Nethra lists the tree and reads only the folders/files relevant to the change at hand. It does not clone the repository or attach it to ordinary chat context.
 
 Read source is held in a bounded, in-memory reference cache for one following turn, then discarded. At most a 6,000-character source index, four selected file excerpts, and 36,000 characters of source can enter that turn. The reference material consumes the same turn budget as chat history, keeping ordinary voice and chat turns cheap while letting the model work from the actual current implementation rather than guessing.
 
-`propose_code_change` creates one reviewable multi-file pull request on a new `junction/...` branch. It can change up to 12 source files atomically, but cannot target `main`, alter CI workflows, or read/write signing and local secret material. The proposal is `DESTRUCTIVE`, so Junction always shows the owner its exact file payload and waits for an on-screen approval tap before creating the PR. “Always allow” is unavailable for repository changes.
+`propose_code_change` creates one reviewable multi-file pull request on a new `nethra/...` branch. It can change up to 12 source files atomically, but cannot target `main`, alter CI workflows, or read/write signing and local secret material. The proposal is `DESTRUCTIVE`, so Nethra always shows the owner its exact file payload and waits for an on-screen approval tap before creating the PR. “Always allow” is unavailable for repository changes.
 
-GitHub Actions builds and runs unit tests for the PR. Junction can check that PR's state and, only when GitHub reports the Junction branch mergeable with successful checks, offer a separate on-screen **Merge PR** action. It never pushes directly to `main` and never auto-merges. A merged PR triggers the normal signed GitHub Pages APK pipeline; the in-app update card then downloads, checks, backs up, and hands the update to Android's installer.
+GitHub Actions builds and runs unit tests for the PR. Nethra can check that PR's state and, only when GitHub reports the Nethra branch mergeable with successful checks, offer a separate on-screen **Merge PR** action. It never pushes directly to `main` and never auto-merges. A merged PR triggers the normal signed GitHub Pages APK pipeline; the in-app update card then downloads, checks, backs up, and hands the update to Android's installer.
 ## Device validation
 
 ```

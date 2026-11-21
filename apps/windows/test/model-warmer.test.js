@@ -33,14 +33,14 @@ test('phone prewarms the selected 80B model instead of the default 30B',async()=
     const route=new URL(url).pathname,body=options.body?JSON.parse(options.body):null;
     calls.push({route,body});
     if(route==='/api/ps')return {ok:true,json:async()=>({models:[]})};
-    if(route==='/api/tags')return {ok:true,json:async()=>({models:[{name:'junction-qwen3-next:80b-q3km',size:39*GiB}]})};
+    if(route==='/api/tags')return {ok:true,json:async()=>({models:[{name:'nethra-qwen3-next:80b-q3km',size:39*GiB}]})};
     if(route==='/api/generate')return {ok:true,json:async()=>({load_duration:10e9})};
     throw Error(route);
   };
   const agent=new LocalAgentRuntime({fetchImpl,freeMemory:()=>40*GiB});
-  assert.equal(await agent.prewarm('junction-qwen3-next:80b-q3km',{reason:'chat_open',priority:'interactive'}),true);
-  assert.deepEqual(calls.filter(call=>call.route==='/api/generate').map(call=>call.body.model),['junction-qwen3-next:80b-q3km']);
-  assert.equal(agent.modelState('junction-qwen3-next:80b-q3km').state,'ready');
+  assert.equal(await agent.prewarm('nethra-qwen3-next:80b-q3km',{reason:'chat_open',priority:'interactive'}),true);
+  assert.deepEqual(calls.filter(call=>call.route==='/api/generate').map(call=>call.body.model),['nethra-qwen3-next:80b-q3km']);
+  assert.equal(agent.modelState('nethra-qwen3-next:80b-q3km').state,'ready');
 });
 
 test('a load request generates nothing: no prompt, messages, tools or format',async()=>{

@@ -66,7 +66,7 @@ class ForemanApi{
    }
    return result;
   }
-  if(f.closed)throw new Error('Junction is quitting');
+  if(f.closed)throw new Error('Nethra is quitting');
   if(type==='project.activity.review'){
    if(source!=='desktop')throw new Error('Review project activity on Windows');
    documentFields(payload,['id','through']);

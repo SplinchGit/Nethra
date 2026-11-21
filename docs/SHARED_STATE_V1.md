@@ -1,10 +1,10 @@
-# Junction shared state v1
+# Nethra shared state v1
 
 Shared state is disabled until the owner signs in and opts in on each device.
 Local databases remain the working copies; Firestore is the convergence layer for
 the same Firebase owner, not an action transport.
 
-The protocol requires no custom always-on Junction server and is designed to fit
+The protocol requires no custom always-on Nethra server and is designed to fit
 Firebase's Spark plan for a small owner deployment. Firestore currently documents
 no-cost quotas of 50,000 reads/day, 20,000 writes/day, 1 GiB stored data, and
 10 GiB/month egress for the eligible free database. This is quota-backed, not an
@@ -18,13 +18,13 @@ Spark and monitor Firebase usage. See https://firebase.google.com/pricing.
 - `shared_conversations/{id}/messages/{id}`: immutable set-union messages. Role,
   content, provenance, source, device, and timestamp cannot be updated or deleted.
 - `shared_memory/{id}`: immutable OWNER-provenance, owner-confirmed facts. Only
-  `deletedAt` may change. Facts replay locally as JUNCTION context.
+  `deletedAt` may change. Facts replay locally as NETHRA context.
 - `feed_items`: read-only in the Windows client. The existing Android producer
   remains the source until a dedicated shared Feed protocol replaces it.
 - `remote_commands`: deliberately separate. Linking devices does not create a
   command or authorize any PC action.
 
-Only `OWNER`, `JUNCTION`, and `UNTRUSTED` provenance values are accepted. Synced
+Only `OWNER`, `NETHRA`, and `UNTRUSTED` provenance values are accepted. Synced
 history is context only: neither Android nor Windows treats an imported message as
 the live owner trigger for a tool call. Provider API keys, Firebase refresh tokens,
 raw screenshots, raw PC context, tool arguments, and plan text are absent from all

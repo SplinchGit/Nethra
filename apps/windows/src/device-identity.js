@@ -32,7 +32,7 @@ class DeviceIdentityStore {
   save(value) { fs.mkdirSync(this.directory, { recursive: true }); writeAtomic(this.file, JSON.stringify(value, null, 2)); }
   claimOwner(uid) {
     const value=this.load();
-    if(value.ownerUid&&value.ownerUid!==uid)throw new Error("This PC is already bound to another Junction owner.");
+    if(value.ownerUid&&value.ownerUid!==uid)throw new Error("This PC is already bound to another Nethra owner.");
     const claimed={...value,ownerUid:uid};this.save(claimed);return claimed;
   }
   setSession(session) {
@@ -58,7 +58,7 @@ class DeviceIdentityStore {
   getProviderKey(providerId) {
     try { if(!/^[a-z0-9_-]{1,40}$/i.test(providerId)||!this.safeStorage.isEncryptionAvailable()) return ""; return this.safeStorage.decryptString(Buffer.from(fs.readFileSync(path.join(this.directory, `provider-${providerId}.bin`),"utf8"),"base64")); } catch { return ""; }
   }
-  /** DPAPI-backed storage for Junction-owned device capabilities. */
+  /** DPAPI-backed storage for Nethra-owned device capabilities. */
   setSecureValue(name, value) {
     if (!/^[a-z0-9_-]{1,80}$/i.test(name) || !this.safeStorage.isEncryptionAvailable()) throw new Error("Windows credential encryption is unavailable.");
     const file = path.join(this.directory, `secure-${name}.bin`);

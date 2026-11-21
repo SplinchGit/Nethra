@@ -67,8 +67,8 @@ const RESUME_CLAIM = /\b(?:I(?:'ll| will) (?:resume|restart|continue working on)
 function correctTaskClaims(content, task) {
   if (!task || typeof content !== "string") return content;
   const status = String(task.status).toLowerCase().replaceAll("_", " ");
-  if (PAUSE_CLAIM.test(content) && task.status !== "PAUSED") return `${content}\n\n(Correction from Junction: “${String(task.goal).slice(0, 80)}” is not paused; it is ${status}. Say “pause” here, or use Tasks, to pause it.)`;
-  if (RESUME_CLAIM.test(content) && task.status === "PAUSED") return `${content}\n\n(Correction from Junction: “${String(task.goal).slice(0, 80)}” is still paused. Say “resume” here to restart it.)`;
+  if (PAUSE_CLAIM.test(content) && task.status !== "PAUSED") return `${content}\n\n(Correction from Nethra: “${String(task.goal).slice(0, 80)}” is not paused; it is ${status}. Say “pause” here, or use Tasks, to pause it.)`;
+  if (RESUME_CLAIM.test(content) && task.status === "PAUSED") return `${content}\n\n(Correction from Nethra: “${String(task.goal).slice(0, 80)}” is still paused. Say “resume” here to restart it.)`;
   return content;
 }
 
@@ -94,7 +94,7 @@ function parseNethraChat(content) {
     objective = `${verb} ${objective}`.trim();
   }
   const selected=/\b(?:use|using|with|on)\s+(?:the\s+)?(80|30)\s?b(?:\s+(thinking|instruct))?(?:\s+(q4(?:_k_m)?))?\b/i.exec(objective);
-  return objective ? { action: "create", goal: objective, mode:isOngoingRequest(message)||/\btrack\b/i.test(goal[0])?'ONGOING':'FINITE',...(selected?{model:selected[1]==='80'?(selected[3]&&selected[2]?.toLowerCase()!=='instruct'?'junction-qwen3-next-thinking:80b-q4km':selected[2]?.toLowerCase()==='thinking'?'junction-qwen3-next-thinking:80b-q3km':'junction-qwen3-next:80b-q3km'):'qwen3:30b'}:{}) } : { action: "help" };
+  return objective ? { action: "create", goal: objective, mode:isOngoingRequest(message)||/\btrack\b/i.test(goal[0])?'ONGOING':'FINITE',...(selected?{model:selected[1]==='80'?(selected[3]&&selected[2]?.toLowerCase()!=='instruct'?'nethra-qwen3-next-thinking:80b-q4km':selected[2]?.toLowerCase()==='thinking'?'nethra-qwen3-next-thinking:80b-q3km':'nethra-qwen3-next:80b-q3km'):'qwen3:30b'}:{}) } : { action: "help" };
 }
 
 const FINISHED = new Set(["COMPLETED", "CANCELLED", "FAILED"]);

@@ -15,7 +15,7 @@ function fixture(t){
 
 test('a code-work completion and later Apply wake their sleeping objective once per durable change',async t=>{
   const {reconcileCodeWork}=require('../src/nethra-work-status');
-  const f=fixture(t),task=f.store.create({goal:'Measure the reviewed change',allowCodeWork:true,model:'junction-qwen3-next:80b-q3km',continuous:true});
+  const f=fixture(t),task=f.store.create({goal:'Measure the reviewed change',allowCodeWork:true,model:'nethra-qwen3-next:80b-q3km',continuous:true});
   f.store.update(task.id,{status:'SLEEPING',nextWakeAt:f.now()+86_400_000});
   const project={id:'work-1',sourceObjectiveId:task.id,status:'COMPLETED',verifiedSha:'candidate-1',tasks:[],appliedAt:null};
   let executions=0;

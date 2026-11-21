@@ -1,6 +1,6 @@
-# Junction same-LAN transport
+# Nethra same-LAN transport
 
-Junction's Windows client advertises `_junction._tcp.local` with mDNS/DNS-SD and
+Nethra's Windows client advertises `_nethra._tcp.local` with mDNS/DNS-SD and
 binds a TLS WebSocket service to a selected private IPv4 interface. It does not
 bind loopback-only companion ports to the LAN and does not configure port
 forwarding, relays, VPNs, or public exposure.
@@ -17,7 +17,7 @@ Keystore and sends only its public key during pairing. Windows protects its
 TLS identity, pairing records, tokens, and revocations with Electron
 `safeStorage`. Private material is never uploaded or committed.
 
-An existing Local Junction Brain pairing can establish LAN trust automatically
+An existing Local Nethra Brain pairing can establish LAN trust automatically
 without another QR scan. Both peers prove possession of the already device-local
 pairing key using role-separated HMAC-SHA256 proofs bound to a fresh nonce,
 instance ID, Android public key, and TLS public-key pin. Discovery alone cannot
@@ -27,7 +27,7 @@ the Android Keystore key. QR expiry never expires an established trust record.
 The Android trust record pins SHA-256 of the Windows certificate's SPKI public key.
 A dedicated TLS client accepts only that pin and validates certificate expiry. TLS
 hostname verification remains enabled; the generated certificate contains the
-Junction `.local` name and the selected private IP SAN. If Windows Firewall
+Nethra `.local` name and the selected private IP SAN. If Windows Firewall
 prompts, approve the installer. It adds program-specific inbound rules for TCP
 43111 and UDP 5353 with RemoteIP=LocalSubnet and edge traversal disabled. The rules
 also work when Windows labels the home adapter Public; they never permit arbitrary

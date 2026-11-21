@@ -1,0 +1,1420 @@
+package com.splinch.nethra.assistant.runtime
+
+import com.splinch.nethra.feature.voice.model.*
+import com.splinch.nethra.feature.voice.VoiceBackend
+import com.splinch.nethra.feature.voice.VoiceCoordinator
+import com.splinch.nethra.feature.voice.VoiceCoordinatorListener
+
+import com.splinch.nethra.assistant.context.*
+import com.splinch.nethra.assistant.conversation.*
+import com.splinch.nethra.assistant.planning.*
+import com.splinch.nethra.assistant.provider.*
+import com.splinch.nethra.assistant.tools.*
+import com.splinch.nethra.assistant.trust.*
+
+import android.content.Context
+import com.splinch.nethra.assistant.context.ContextBlock
+import com.splinch.nethra.assistant.provider.LlmEvent
+import com.splinch.nethra.assistant.provider.ModelCatalog
+import com.splinch.nethra.assistant.provider.ProviderRegistry
+import com.splinch.nethra.assistant.context.ReaderOutput
+import com.splinch.nethra.feature.voice.realtime.RealtimeConnectionState
+import com.splinch.nethra.feature.voice.realtime.ToolCall
+import com.splinch.nethra.assistant.tools.PostConditionVerifier
+import com.splinch.nethra.assistant.tools.ToolRegistry
+import com.splinch.nethra.data.database.audit.ActionLogDao
+import com.splinch.nethra.data.database.memory.MemoryFactDao
+import com.splinch.nethra.data.database.usage.ModelUsageDao
+import com.splinch.nethra.data.database.usage.ModelUsageEntity
+import com.splinch.nethra.data.database.planning.PlanDao
+import com.splinch.nethra.feature.feed.FeedRepository
+import com.splinch.nethra.feature.feed.model.FeedItem
+import com.splinch.nethra.data.preference.ProviderConfig
+import com.splinch.nethra.data.preference.UserPrefsRepository
+import com.splinch.nethra.feature.notification.service.NethraNotificationListenerService
+import com.splinch.nethra.data.sync.firebase.AuthManager
+import com.splinch.nethra.feature.update.UpdateInfo
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
+import org.json.JSONObject
+
+/**
+ * Coarse, correlation-safe summary of one [ChatManager.sendUserMessage] turn.
+ *
+ * Deliberately excludes tool arguments, plan text, and raw provider output --
+ * this is built to be safe to mirror off-device (see RemoteCommandSyncManager),
+ * not a full audit record. [ChatManager.activePlan] and the on-device audit
+ * log remain the source of truth for anything more detailed.
+ */
+data class TurnOutcome(
+    val assistantText: String?,
+    val toolsRequested: Int,
+    val toolsRan: Boolean,
+    val approvalRequired: Boolean,
+    val errorMessage: String?
+)
+
+class ChatManager(
+    context: Context,
+    private val store: ConversationStore,
+    private val feedRepository: FeedRepository,
+    private val prefs: UserPrefsRepository,
+    private val authManager: AuthManager,
+    private val updateState: MutableStateFlow<UpdateInfo?>,
+    private val providerRegistry: ProviderRegistry,
+    private val actionLogDao: ActionLogDao,
+    private val modelUsageDao: ModelUsageDao,
+    private val planDao: PlanDao,
+    private val memoryFactDao: MemoryFactDao,
+    private val messageHandler: MessageHandler = MessageHandler(),
+    private val now: () -> Instant = { Instant.now() }
+) : VoiceCoordinatorListener {
+    companion object {
+
+        private const val CONTEXT_OPEN = "<<<NETHRA_CONTEXT_V1>>>"
+        private const val CONTEXT_CLOSE = "<<<END_NETHRA_CONTEXT_V1>>>"
+
+        // §1.1 escalation trigger: a workhorse turn proposing more steps than
+        // this is treated as a signal the task was too complex for it.
+        private const val FRONTIER_STEP_THRESHOLD = 4
+
+        // §Cost control: rough char-based proxy for a per-turn token budget.
+        private const val MAX_CONTEXT_CHARS = 60_000
+
+        /** Messages kept by a default /trim or the chat menu's trim action. */
+        const val DEFAULT_TRIM_KEEP = 20
+
+        private const val APPROVAL_TAG_PREFIX = "approval:"
+    }
+
+    private val appContext = context.applicationContext
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val conversationCoordinator = ConversationCoordinator(store, scope, now)
+    private val providerRouter = ProviderRouter(providerRegistry, prefs)
+    private val memoryService = com.splinch.nethra.assistant.memory.MemoryService(memoryFactDao)
+    private val voiceCoordinator = VoiceCoordinator(
+        context = appContext,
+        prefs = prefs,
+        authManager = authManager,
+        history = { _messages.value },
+        pairedProviderSelected = { prefs.providerConfigFlow.first().providerId == "local" },
+        toolDefinitions = { ToolRegistry.allDefinitions() },
+        listener = this
+    )
+    private val toolExecutor = ToolExecutor(
+        ToolDependencies(
+            context = appContext,
+            prefs = prefs,
+            feedRepository = feedRepository,
+            updateState = updateState,
+            providerRouter = providerRouter,
+            memoryService = memoryService,
+            sessionId = { session.sessionId },
+            speechModeEnabled = { voiceCoordinator.speechModeEnabled.value },
+            setSpeechMode = ::setSpeechMode
+        )
+    )
+    private val verifier = PostConditionVerifier(
+        prefs = prefs,
+        feedRepository = feedRepository,
+        activeNotificationKeys = NethraNotificationListenerService::activeKeys
+    )
+    private val planCoordinator = PlanCoordinator(
+        planDao = planDao,
+        actionLogDao = actionLogDao,
+        verifier = verifier,
+        egressValidator = ::validateEgress
+    )
+
+    private val session: ChatSession
+        get() = conversationCoordinator.currentSession
+
+    // Tool calls proposed by the realtime (voice) path accumulate here across
+    // a single model response and are turned into one plan at onResponseDone.
+    private val pendingRealtimeCalls = mutableListOf<PendingToolCall>()
+    private val activeTextTurnJob = AtomicReference<Job?>(null)
+    private val turnEpoch = TurnEpoch()
+    private val turnAdmissionMutex = Mutex()
+    private val untrustedOutputTools = setOf("read_screen", "read_notifications", "get_calendar_agenda", "gmail_triage_inbox")
+
+    // §1.1 two-lane escalation: set when the *previous* turn signalled the
+    // next one should use the frontier model (plan complexity or a parse
+    // failure on the workhorse). Consumed (and reset) by the next send.
+    private val _messages: StateFlow<List<ChatMessage>>
+        get() = conversationCoordinator.messages
+    val messages: StateFlow<List<ChatMessage>> = conversationCoordinator.messages
+    val sessionId: StateFlow<String> = conversationCoordinator.sessionId
+
+    private val _streamingAssistant = MutableStateFlow<StreamingAssistantMessage?>(null)
+    val streamingAssistant: StateFlow<StreamingAssistantMessage?> = _streamingAssistant.asStateFlow()
+
+    private val _turnActivity = MutableStateFlow<String?>(null)
+    val turnActivity: StateFlow<String?> = _turnActivity.asStateFlow()
+
+    /** §2.1 plan-level confirmation: null unless a plan is awaiting owner approval. */
+    val activePlan: StateFlow<Plan?> = planCoordinator.activePlan
+
+    val connectionState: StateFlow<RealtimeConnectionState> = voiceCoordinator.connectionState
+    val speechModeEnabled: StateFlow<Boolean> = voiceCoordinator.speechModeEnabled
+
+    /** Compatibility state for older UI/session consumers. Tools are always available. */
+    private val _agentToolsEnabled = MutableStateFlow(true)
+    val agentToolsEnabled: StateFlow<Boolean> = _agentToolsEnabled.asStateFlow()
+
+    val micEnabled: StateFlow<Boolean> = voiceCoordinator.micEnabled
+    val voiceBackendState: StateFlow<VoiceBackend> = voiceCoordinator.backendState
+
+    /** The currently configured text-chat provider, for a quick switcher UI. */
+    val providerConfigFlow: Flow<ProviderConfig> = prefs.providerConfigFlow
+
+    val localVoiceListening: StateFlow<Boolean> = voiceCoordinator.localListening
+    val localVoiceSpeaking: StateFlow<Boolean> = voiceCoordinator.localSpeaking
+    /** Live call state with a monotonic start, for the visible call timer. */
+    val voiceCallStatus: StateFlow<com.splinch.nethra.feature.voice.model.VoiceCallStatus> = voiceCoordinator.callStatus
+    /** The voice that actually produced the most recent speech. */
+    val ttsIdentity: StateFlow<com.splinch.nethra.feature.voice.model.TtsIdentity?> = voiceCoordinator.ttsIdentity
+    fun installedDeviceVoices() = voiceCoordinator.installedDeviceVoices()
+    suspend fun setVoicePrefs(value: com.splinch.nethra.data.preference.VoicePrefs) = voiceCoordinator.setVoicePrefs(value)
+    fun previewVoice(value: com.splinch.nethra.data.preference.VoicePrefs, cloud: Boolean): Boolean = voiceCoordinator.previewVoice(value, cloud)
+
+    /** One spoken approval offer at a time, bound to the exact plan that was read aloud. */
+    private val voiceApproval = VoiceApprovalGate()
+
+    private val _lastUndo = MutableStateFlow<UndoAction?>(null)
+    val lastUndo: StateFlow<UndoAction?> = _lastUndo.asStateFlow()
+
+    suspend fun initialize() {
+        conversationCoordinator.initialize()
+        ensureToolsAlwaysEnabled()
+        val savedVoiceBackend = if (prefs.voiceBackendFlow.first() == "local") {
+            VoiceBackend.LOCAL
+        } else {
+            VoiceBackend.REALTIME
+        }
+        voiceCoordinator.initialize(session.speechModeEnabled, savedVoiceBackend)
+        rebuildSessionScopedComponents()
+        seedTrustContextFromRecentMessages(session.messages)
+
+        // §2.3 interruption tolerance: offer to resume a plan left mid-flight
+        // (e.g. app was killed while paused/running) rather than losing it.
+        val resumable = planCoordinator.restoreActive(session.sessionId)
+        if (resumable != null) {
+            appendSystemMessage("Resuming an interrupted plan: ${resumable.goal}")
+        }
+    }
+
+    private suspend fun rebuildSessionScopedComponents() {
+        planCoordinator.resetSession(session.sessionId, prefs.alwaysAllowedToolsFlow.first())
+        _alwaysAllowedTools.value = planCoordinator.currentAlwaysAllowed()
+    }
+
+    private val _alwaysAllowedTools = MutableStateFlow<Set<String>>(emptySet())
+    val alwaysAllowedTools: StateFlow<Set<String>> = _alwaysAllowedTools.asStateFlow()
+
+    /** §1.5 owner-facing promotion management — persists and takes effect immediately. */
+    suspend fun grantAlwaysAllow(toolName: String) {
+        if (ToolRegistry.get(toolName)?.riskTier == com.splinch.nethra.assistant.tools.RiskTier.DESTRUCTIVE) return
+        planCoordinator.grantAlwaysAllow(toolName)
+        prefs.grantAlwaysAllowTool(toolName)
+        _alwaysAllowedTools.value = planCoordinator.currentAlwaysAllowed()
+    }
+
+    suspend fun revokeAlwaysAllow(toolName: String) {
+        planCoordinator.revokeAlwaysAllow(toolName)
+        prefs.revokeAlwaysAllowTool(toolName)
+        _alwaysAllowedTools.value = planCoordinator.currentAlwaysAllowed()
+    }
+
+    fun setChatVisible(visible: Boolean) {
+        voiceCoordinator.setChatVisible(visible)
+    }
+
+    /** Reads owner-selected external content through the tool-free reader lane. */
+    suspend fun reviewFeedItem(item: FeedItem) {
+        val provider = providerRouter.activeProvider()
+        if (provider == null) {
+            appendSystemMessage("No AI provider configured. Add your API key in Settings.")
+            return
+        }
+
+        val sourceRef = "feed:${item.id}"
+        val rawContent = buildString {
+            append("Source: ").append(item.source).append('\n')
+            append("Title: ").append(item.title).append('\n')
+            item.body?.takeIf { it.isNotBlank() }?.let { append("Body: ").append(it) }
+        }
+        val readerOutput = provider.readUntrusted(rawContent, sourceRef)
+        if (readerOutput == null) {
+            appendSystemMessage("Couldn't safely read that item. Its content was not added to chat.")
+            return
+        }
+
+        val observation = buildString {
+            append("Summary: ").append(readerOutput.summary)
+            if (readerOutput.entities.isNotEmpty()) {
+                append("\nEntities: ")
+                append(readerOutput.entities.joinToString { "${it.type}: ${it.value}" })
+            }
+            if (readerOutput.contentRequests.isNotEmpty()) {
+                append("\nContent requests: ")
+                append(readerOutput.contentRequests.joinToString("; "))
+            }
+        }
+        appendMessage(
+            ChatMessage(
+                sender = Sender.ASSISTANT,
+                content = observation,
+                provenance = Provenance.UNTRUSTED,
+                sourceRef = sourceRef
+            )
+        )
+    }
+
+    suspend fun sendUserMessage(
+        raw: String,
+        imagePath: String? = null,
+        forceResearch: Boolean = false,
+        /** Spoken (from a live call) or typed; reported to the model as transient session state. */
+        inputMode: InputMode = InputMode.TYPED,
+        /**
+         * Fires exactly once per call, on every exit path, with a coarse summary of how
+         * the turn ended. Optional and additive -- omitted by the voice/chat-UI callers
+         * that already observe [messages]/[activePlan] directly -- so this does not change
+         * their behavior. Added for RemoteCommandSyncManager, which has no UI to watch and
+         * needs to know when a headless turn has actually finished (see PR: remote command
+         * result correlation).
+         */
+        onTurnComplete: ((TurnOutcome) -> Unit)? = null
+    ) {
+        val requirePairedProvider = voiceCoordinator.isPairedCall()
+        // §1.1 explicit escalation request: "/frontier <message>" forces the
+        // frontier lane for this turn without being swallowed by the
+        // MessageHandler's generic "/"-prefixed command dispatch.
+        var explicitFrontier = false
+        var effectiveRaw = raw
+        val trimmedRaw = raw.trim()
+        if (trimmedRaw.startsWith("/frontier ")) {
+            explicitFrontier = true
+            effectiveRaw = trimmedRaw.removePrefix("/frontier ").trim()
+        }
+
+        val processed = messageHandler.processMessage(effectiveRaw, Sender.USER)
+        val commandResult = processed.commandResult
+        if (commandResult != null) {
+            handleCommand(commandResult)
+            // Commands print to the screen rather than answer aloud, but the turn is
+            // still over, and on a call the mic has to come back either way.
+            endVoiceTurn("command")
+            onTurnComplete?.invoke(TurnOutcome(null, 0, false, false, null))
+            return
+        }
+
+        val (isValid, error) = messageHandler.validateMessage(processed.content)
+        if (!isValid && imagePath == null) {
+            appendSystemMessage(error ?: "Invalid message")
+            endVoiceTurn("invalid_message", error ?: "Sorry, I couldn't use that.")
+            onTurnComplete?.invoke(TurnOutcome(null, 0, false, false, error ?: "Invalid message"))
+            return
+        }
+
+        turnAdmissionMutex.lock()
+        try {
+            val turnId = turnEpoch.begin()
+            // Rebuilt every turn and never stored: a call that has ended stops here.
+            TurnSessionContext.current = TurnSessionContext.of(
+                voiceCoordinator.callStatus.value,
+                speechOutputOn = voiceCoordinator.speechModeEnabled.value,
+                input = inputMode,
+                nowElapsedMs = android.os.SystemClock.elapsedRealtime()
+            )
+            activeTextTurnJob.get()?.cancelAndJoin()
+            activeTextTurnJob.set(null)
+            _streamingAssistant.value = null
+            _turnActivity.value = null
+
+        val userMessage = ChatMessage(
+            sender = Sender.USER,
+            content = processed.content,
+            provenance = Provenance.OWNER,
+            sourceRef = "user_message:${UUID.randomUUID()}",
+            imagePath = imagePath
+        )
+        appendMessage(userMessage)
+
+        // Describe the image once, in the background, so it can be replayed as
+        // text on later turns. Launched rather than awaited: this turn already
+        // carries the real bytes, so there's nothing to wait for.
+        if (imagePath != null) {
+            scope.launch { summarizeAttachedImage(userMessage) }
+        }
+
+        // Vision needs the text-provider API either way -- Realtime voice has
+        // no image channel in this app, so route straight past it when an
+        // image is attached rather than silently dropping the picture.
+        // Only the Realtime backend routes turns through the WebRTC lane. The local
+        // backend deliberately uses this same text path and simply speaks the reply
+        // (see the TextDone branch below); sending it down here would always fail,
+        // printing "Voice isn't available right now" on *every single* utterance and
+        // making working on-device voice look broken.
+        if (
+            !requirePairedProvider && prefs.providerConfigFlow.first().providerId != "local" &&
+            voiceCoordinator.backendState.value == VoiceBackend.REALTIME &&
+            voiceCoordinator.speechModeEnabled.value &&
+            imagePath == null
+        ) {
+            if (voiceCoordinator.trySendRealtimeText(processed.content)) {
+                // Realtime voice owns this reply from here; there is no text result to
+                // correlate back to a caller waiting on onTurnComplete.
+                onTurnComplete?.invoke(
+                    TurnOutcome(null, 0, false, false, "Handled via realtime voice; no text result available")
+                )
+                return
+            }
+            appendSystemMessage("Voice isn't available right now — replying via text instead.")
+        }
+
+        // Text mode: use LLM provider
+        val activeProvider: com.splinch.nethra.assistant.provider.LlmProvider = providerRouter.activeProvider()
+            ?.takeIf { !requirePairedProvider || it.id == "local" }
+            ?: run {
+                val configurationError = providerRegistry.activeProviderConfigurationError()
+                    ?: "No AI provider configured. Open Settings to configure one."
+                appendSystemMessage(configurationError)
+                endVoiceTurn("no_provider", configurationError)
+                onTurnComplete?.invoke(
+                    TurnOutcome(null, 0, false, false, configurationError)
+                )
+                return
+            }
+
+        // §1.1 escalation: explicit request, or a prior turn signalling this
+        // one should use the frontier lane (plan complexity / parse failure).
+        val useFrontier = providerRouter.consumeFrontierRequest(explicitFrontier)
+
+        val turnCompletion = TurnCompletion(onTurnComplete)
+        val turnJob = scope.launch(Dispatchers.IO, start = CoroutineStart.LAZY) {
+            val tools = when {
+                activeProvider.id == "local" -> listOf(
+                    ToolDefinition(
+                        name = "nethra_local_agent",
+                        description = "Signal the paired PC to run Nethra's bounded, read-only local agent.",
+                        parametersJson = "{\"type\":\"object\",\"properties\":{},\"additionalProperties\":false}"
+                    )
+                )
+                else -> ToolRegistry.allDefinitions()
+            }
+            val contextBlocks = buildContextBlocks(activeProvider, tools)
+            var itemId = UUID.randomUUID().toString()
+            var accumulatedText = ""
+            var accumulatedThinking: String? = null
+            var thinkingCharacters = 0
+            var thinkingReported = false
+            var tokensPerSecond: Double? = null
+            var lastAssistantText: String? = null
+            val requestedCalls = mutableListOf<PendingToolCall>()
+            var usage: com.splinch.nethra.assistant.provider.ProviderUsage? = null
+            var sawToolArgParseFailure = false
+            val responseStartedAt = System.currentTimeMillis()
+            // Whether the model's own words are already on their way to the speaker. If
+            // they are, nothing else in this turn may speak: [speak] flushes, so a tool
+            // confirmation arriving a moment later would cut the answer off mid-word.
+            var spokeReplyAloud = false
+
+            var currentProvider = activeProvider
+            var attemptsLeft = if (activeProvider.id == "local") 1 else 2
+            var fatalError: String? = null
+
+            while (attemptsLeft > 0) {
+                attemptsLeft--
+                var laneError: String? = null
+                try {
+                    val frontierRequested = useFrontier && currentProvider.frontierModel != null
+                    (if (forceResearch && currentProvider is com.splinch.nethra.assistant.provider.ResearchCapableProvider)
+                        currentProvider.actWithResearch(contextBlocks, tools, frontierRequested, session.sessionId, true)
+                    else currentProvider.act(contextBlocks, tools, frontierRequested, session.sessionId)).collect { event ->
+                        if (!turnEpoch.isCurrent(turnId)) return@collect
+                        when (event) {
+                            is LlmEvent.Activity -> _turnActivity.value = event.label.takeIf { it.isNotBlank() }
+                            is LlmEvent.TextDelta -> {
+                                _turnActivity.value = "Generating response"
+                                val current = _streamingAssistant.value
+                                if (current == null || current.itemId != itemId) {
+                                    _streamingAssistant.value = StreamingAssistantMessage(itemId, event.delta)
+                                } else {
+                                    _streamingAssistant.value = current.copy(content = current.content + event.delta)
+                                }
+                                accumulatedText += event.delta
+                            }
+                            is LlmEvent.TextDone -> {
+                                _turnActivity.value = null
+                                val final = stripLeakedEnvelope(event.text.ifBlank { accumulatedText })
+                                val finalThinking = event.thinking ?: accumulatedThinking
+                                if (!finalThinking.isNullOrBlank()) {
+                                    thinkingReported = true
+                                    thinkingCharacters += finalThinking.length
+                                }
+                                if (final.isNotBlank()) {
+                                    val turnModel = if (frontierRequested) {
+                                        currentProvider.frontierModel ?: currentProvider.workhorseModel
+                                    } else {
+                                        currentProvider.workhorseModel
+                                    }
+                                    val turnModelLabel = ModelCatalog.modelById(currentProvider.id, turnModel)?.displayName
+                                        ?: "${currentProvider.id}/$turnModel"
+                                    appendMessage(
+                                        ChatMessage(
+                                            sender = Sender.ASSISTANT,
+                                            content = final,
+                                            provenance = Provenance.NETHRA,
+                                            id = event.messageId ?: UUID.randomUUID().toString(),
+                                            sourceRef = "assistant_text:$itemId",
+                                            modelLabel = turnModelLabel,
+                                            thinking = finalThinking,
+                                            tokensPerSecond = event.tokensPerSecond ?: tokensPerSecond,
+                                            telemetry = event.telemetry
+                                        )
+                                    )
+                                    lastAssistantText = final
+                                    // Speak whenever speech mode is on, not only
+                                    // when the LOCAL backend is selected. Reaching
+                                    // here in speech mode means Realtime did not
+                                    // handle the turn (that path returns earlier),
+                                    // so this reply is the text fallback -- and the
+                                    // owner is expecting to hear an answer either
+                                    // way. Gating on the backend meant a configured
+                                    // Azure voice stayed silent for anyone left on
+                                    // the default Realtime setting.
+                                    if (voiceCoordinator.speechModeEnabled.value) {
+                                        com.splinch.nethra.feature.voice.model.VoiceTrace.replyReady(final.length)
+                                        voiceCoordinator.speak(final)
+                                        spokeReplyAloud = true
+                                    }
+                                }
+                                _streamingAssistant.value = null
+                                accumulatedText = ""
+                                accumulatedThinking = null
+                                tokensPerSecond = null
+                                itemId = UUID.randomUUID().toString()
+                            }
+                            is LlmEvent.ToolCallRequested -> {
+                                val parsed = runCatching { JSONObject(event.arguments) }
+                                val args = parsed.getOrElse {
+                                    sawToolArgParseFailure = true
+                                    JSONObject()
+                                }
+                                val summary = ToolRegistry.summarize(event.name, args)
+                                requestedCalls.add(PendingToolCall(event.callId, event.name, args, summary))
+                            }
+                            is LlmEvent.Thinking -> accumulatedThinking = event.text.takeIf { it.isNotBlank() }
+                            is LlmEvent.Usage -> usage = event.usage
+                            is LlmEvent.Error -> {
+                                laneError = event.message
+                                _turnActivity.value = null
+                                _streamingAssistant.value = null
+                            }
+                            is LlmEvent.Done -> {
+                                _streamingAssistant.value = null
+                                _turnActivity.value = null
+                            }
+                        }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    laneError = e.message ?: "Unknown error"
+                }
+
+                if (!turnEpoch.isCurrent(turnId)) {
+                    turnCompletion.report(
+                        TurnOutcome(null, 0, false, false, "Response superseded by a newer message.")
+                    )
+                    return@launch
+                }
+
+                if (laneError == null) {
+                    fatalError = null
+                    break
+                }
+
+                // §1.1 health-aware fallback: deprioritise the failing provider
+                // for 60s and fall through to another configured one if we
+                // have an attempt left; otherwise surface the real error.
+                val fallback = providerRouter.afterFailure(
+                    providerId = currentProvider.id,
+                    allowFallback = attemptsLeft > 0
+                )
+                if (fallback == null) {
+                    fatalError = laneError
+                    break
+                }
+                appendSystemMessage("${currentProvider.id} failed (${providerRouter.cleanError(laneError)}); falling back to ${fallback.id}.")
+                currentProvider = fallback
+                itemId = UUID.randomUUID().toString()
+                accumulatedText = ""
+                accumulatedThinking = null
+                tokensPerSecond = null
+                requestedCalls.clear()
+                _streamingAssistant.value = null
+            }
+
+            if (fatalError != null) {
+                appendSystemMessage("Error: ${providerRouter.cleanError(fatalError)}")
+                // On a call this is the whole turn. Saying it out loud is the difference
+                // between "Nethra couldn't do that" and Nethra having gone silent.
+                endVoiceTurn("provider_error", "Sorry, that didn't work: ${providerRouter.cleanError(fatalError)}")
+                turnCompletion.report(
+                    TurnOutcome(null, 0, false, false, providerRouter.cleanError(fatalError))
+                )
+                return@launch
+            }
+
+            var costEstimatePerStep: Double? = null
+            usage?.let { reported ->
+                val turnCost = ModelCatalog.estimateCostUsd(reported.model, reported.tokensIn, reported.tokensOut)
+                if (turnCost != null && requestedCalls.isNotEmpty()) {
+                    costEstimatePerStep = turnCost / requestedCalls.size
+                }
+            }
+            if (requestedCalls.isNotEmpty()) {
+                handleProposedPlan(
+                    requestedCalls,
+                    processed.content.take(120),
+                    costEstimatePerStep,
+                    speakOutcomes = !spokeReplyAloud
+                )
+            }
+
+            // §1.1 escalation triggers for the *next* turn: this one was too
+            // complex, or the workhorse emitted malformed tool arguments.
+            if (!useFrontier && requestedCalls.size > FRONTIER_STEP_THRESHOLD) {
+                providerRouter.requestFrontierForNextTurn()
+                appendSystemMessage(
+                    "That plan had ${requestedCalls.size} steps — escalating to the frontier model for the next turn."
+                )
+            } else if (!useFrontier && sawToolArgParseFailure) {
+                providerRouter.requestFrontierForNextTurn()
+                appendSystemMessage("A tool call had malformed arguments — escalating to the frontier model for the next turn.")
+            }
+
+            // handleProposedPlan (via PlanCoordinator.propose) either ran the plan to
+            // completion before returning (autoRun) or left it parked in [activePlan]
+            // awaiting owner approval -- so this check, made right after it returns, is
+            // an accurate read of which one happened for *this* turn's calls.
+            val approvalRequired = requestedCalls.isNotEmpty() && activePlan.value != null
+            val reported = usage
+            val selectedModel = if (useFrontier) {
+                currentProvider.frontierModel ?: currentProvider.workhorseModel
+            } else {
+                currentProvider.workhorseModel
+            }
+            modelUsageDao.insert(
+                ModelUsageEntity(
+                    id = UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    sessionId = session.sessionId,
+                    lane = "actor",
+                    provider = reported?.provider ?: currentProvider.id,
+                    model = reported?.model ?: selectedModel,
+                    tokensIn = reported?.tokensIn,
+                    tokensOut = reported?.tokensOut,
+                    latencyMs = System.currentTimeMillis() - responseStartedAt,
+                    telemetryCaptured = true,
+                    toolsAvailable = tools.isNotEmpty(),
+                    toolCallsRequested = requestedCalls.size,
+                    toolNames = requestedCalls.map { it.name }.distinct().joinToString(","),
+                    toolsExecuted = requestedCalls.isNotEmpty() && !approvalRequired,
+                    approvalRequired = approvalRequired,
+                    thinkingCharacters = thinkingCharacters,
+                    thinkingReported = thinkingReported
+                )
+            )
+            turnCompletion.report(
+                TurnOutcome(
+                    assistantText = lastAssistantText,
+                    toolsRequested = requestedCalls.size,
+                    toolsRan = requestedCalls.isNotEmpty() && !approvalRequired,
+                    approvalRequired = approvalRequired,
+                    errorMessage = null
+                )
+            )
+        }
+        activeTextTurnJob.set(turnJob)
+
+        // However this turn ended -- a reply, tool calls and no reply, an empty reply, a
+        // plan waiting on approval, an exception nobody predicted -- the line goes back to
+        // the owner. Re-arming used to hang off a spoken reply alone, so every one of
+        // those other endings left the mic dead with the chip still reading "Mic on".
+        // Ignored when a reply is already being spoken; that turn ends when the audio does.
+        turnJob.invokeOnCompletion { cause ->
+            activeTextTurnJob.compareAndSet(turnJob, null)
+            if (cause != null) {
+                val error = if (cause is CancellationException) {
+                    "Response cancelled or superseded by a newer message."
+                } else {
+                    cause.message ?: "Turn failed unexpectedly."
+                }
+                turnCompletion.report(TurnOutcome(null, 0, false, false, error))
+            }
+            // Explicitly dispatched rather than immediate: this completes on the IO lane,
+            // and the reply, if there is one, was handed to the voice session from there
+            // moments earlier. Queueing keeps them in that order.
+            scope.launch(Dispatchers.Main) {
+                if (turnEpoch.isCurrent(turnId)) endVoiceTurn("turn_complete")
+            }
+        }
+        turnJob.start()
+        } finally {
+            turnAdmissionMutex.unlock()
+        }
+    }
+
+    /**
+     * Ends a voice turn that produced no spoken reply, and hands the microphone back.
+     *
+     * [sayOutLoud] is for the endings the owner would otherwise never learn about: on a
+     * call they are listening, not reading, so a failure that only appends a line to the
+     * chat is indistinguishable from Nethra having quietly hung up. Speaking it also
+     * ends the turn -- the mic comes back when the audio does.
+     */
+    private fun endVoiceTurn(reason: String, sayOutLoud: String? = null) {
+        voiceCoordinator.endLocalTurn(reason, sayOutLoud)
+    }
+
+    /**
+     * §2.1 turns a batch of tool-call requests from one model turn into a
+     * single [Plan], evaluates every step against [TrustGate] up front, and
+     * either runs it immediately (every step auto-allowed) or leaves it in
+     * [activePlan] awaiting one owner-level approve/cancel.
+     */
+    private suspend fun handleProposedPlan(
+        calls: List<PendingToolCall>,
+        goal: String,
+        costEstimatePerStepUsd: Double? = null,
+        /**
+         * False when the model already answered in words on this turn: it is saying what
+         * it is doing, and speaking a confirmation over the top would flush the sentence
+         * the owner is still listening to.
+         */
+        speakOutcomes: Boolean = true
+    ) {
+        planCoordinator.propose(
+            calls = calls,
+            goal = goal,
+            sessionId = session.sessionId,
+            costEstimatePerStepUsd = costEstimatePerStepUsd,
+            speakOutcomes = speakOutcomes,
+            callbacks = planCallbacks()
+        )
+
+    }
+
+    /** Owner approved the pending plan shown in [activePlan]. */
+    suspend fun approvePlan() {
+        planCoordinator.approve(planCallbacks())
+    }
+
+    /** Owner cancelled the pending plan shown in [activePlan]. */
+    suspend fun cancelPlan() {
+        planCoordinator.cancel(planCallbacks())
+    }
+
+    private fun planCallbacks() = PlanCallbacks(
+        appendSystemMessage = ::appendSystemMessage,
+        sendRealtimeResult = ::sendRealtimeResult,
+        endVoiceTurn = ::endVoiceTurn,
+        applyStep = ::applyStepAndReport,
+        voicePrompt = ::offerVoiceApproval
+    )
+
+    private fun stepHash(step: Step): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val canonical = step.tool + ":" + canonicalJson(step.arguments)
+        return digest.digest(canonical.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    }
+
+    private fun canonicalJson(value: Any?): String = when (value) {
+        null, JSONObject.NULL -> "null"
+        is JSONObject -> value.keys().asSequence().toList().sorted().joinToString(",", "{", "}") { JSONObject.quote(it) + ":" + canonicalJson(value.opt(it)) }
+        is org.json.JSONArray -> (0 until value.length()).joinToString(",", "[", "]") { canonicalJson(value.opt(it)) }
+        is String -> JSONObject.quote(value)
+        else -> value.toString()
+    }
+
+    private fun disclosureFor(plan: Plan) = VoiceApprovalPolicy.disclose(plan, toolExecutor::draftDisclosure, ::stepHash)
+
+    /**
+     * Called when a plan is parked for approval. During an owner-started local call, reads an
+     * exact disclosure aloud and offers spoken confirmation for eligible actions; otherwise
+     * says why it needs the screen. Returns false when there is no live call.
+     */
+    private suspend fun offerVoiceApproval(plan: Plan, speakOutcomes: Boolean): Boolean {
+        val callSession = voiceCoordinator.activeLocalCallSession() ?: return false
+        when (val disclosure = disclosureFor(plan)) {
+            is VoiceApprovalPolicy.Disclosure.Eligible -> {
+                voiceApproval.offer(plan.id, disclosure.digest, disclosure.verb, disclosure.spoken, disclosure.summary, callSession, android.os.SystemClock.elapsedRealtime())
+                appendSystemMessage("Read aloud for spoken confirmation: ${disclosure.spoken}")
+                voiceCoordinator.speakTagged(disclosure.spoken, APPROVAL_TAG_PREFIX + plan.id, afterCurrent = !speakOutcomes)
+            }
+            is VoiceApprovalPolicy.Disclosure.ScreenOnly -> {
+                voiceApproval.clear()
+                voiceCoordinator.speakTagged("I need your approval for that on screen, because ${disclosure.reason}.", "screen:" + plan.id, afterCurrent = !speakOutcomes)
+            }
+        }
+        return true
+    }
+
+    override fun onTaggedSpeechCompleted(tag: String) {
+        val pending = voiceApproval.pending ?: return
+        if (tag == APPROVAL_TAG_PREFIX + pending.planId) voiceApproval.promptCompleted(android.os.SystemClock.elapsedRealtime())
+    }
+
+    /** Routes one recognised utterance through a pending spoken approval, if there is one. */
+    private suspend fun handleSpokenApproval(text: String): Boolean {
+        if (voiceApproval.pending == null) return false
+        val plan = activePlan.value
+        val approvalSession = voiceCoordinator.activeLocalCallSession()
+        val digest = plan?.let { (disclosureFor(it) as? VoiceApprovalPolicy.Disclosure.Eligible)?.digest }
+        val decision = voiceApproval.handle(text, android.os.SystemClock.elapsedRealtime(), voiceCoordinator.activeLocalCallSession(), plan?.id, digest)
+        when (decision) {
+            VoiceApprovalGate.Decision.PassThrough -> return false
+            is VoiceApprovalGate.Decision.Approve -> {
+                appendMessage(ChatMessage(sender = Sender.USER, content = text, provenance = Provenance.OWNER, sourceRef = "voice_approval:${decision.planId}"))
+                val current = activePlan.value
+                if (current?.id != decision.planId) {
+                    voiceCoordinator.speak("That proposal is no longer waiting, so nothing was done.")
+                    return true
+                }
+                val at = java.time.LocalTime.now().withNano(0)
+                appendSystemMessage("Approved by voice at $at: ${decision.summary}. (Spoken confirmation during your active call; speech recognition does not verify who is speaking.)")
+                recordVoiceApproval(current, decision.utterance, decision.digest)
+                // Each send must still match, at send time, the draft that was read aloud.
+                current.steps.filter { it.tool == "email_send" }.forEach { toolExecutor.requireExactDraft(it.arguments.optString("draftId")) }
+                // Runs once, then reports what the tools themselves confirmed, not the plan.
+                val result = planCoordinator.approveExact(decision.planId, planCallbacks()) { candidate ->
+                    approvalSession != null && voiceCoordinator.activeLocalCallSession() == approvalSession &&
+                        (disclosureFor(candidate) as? VoiceApprovalPolicy.Disclosure.Eligible)?.digest == decision.digest
+                }
+                val spoken = when {
+                    result == null -> "That proposal is no longer waiting, so nothing was done."
+                    result.failures.isNotEmpty() -> "That didn't fully complete. ${result.failures.first().take(200)}"
+                    result.confirmations.isNotEmpty() -> result.confirmations.joinToString(" ").take(400)
+                    else -> "Done, but the action didn't report a confirmation. Check the chat for details."
+                }
+                voiceCoordinator.speak(spoken)
+            }
+            is VoiceApprovalGate.Decision.Cancel -> {
+                appendMessage(ChatMessage(sender = Sender.USER, content = text, provenance = Provenance.OWNER, sourceRef = "voice_approval:${decision.planId}"))
+                if (activePlan.value?.id == decision.planId) planCoordinator.cancel(planCallbacks())
+                voiceCoordinator.speak("Cancelled. Nothing was sent.")
+            }
+            is VoiceApprovalGate.Decision.Say -> {
+                val pending = voiceApproval.pending
+                if (decision.promptAgain && pending != null) voiceCoordinator.speakTagged(decision.text, APPROVAL_TAG_PREFIX + pending.planId, afterCurrent = false)
+                else voiceCoordinator.speak(decision.text)
+            }
+        }
+        return true
+    }
+
+    /** Audit row for the approval itself, alongside TrustGate's per-step rows. */
+    private suspend fun recordVoiceApproval(plan: Plan, utterance: String, digest: String) {
+        runCatching {
+            actionLogDao.insert(com.splinch.nethra.data.database.audit.ActionLogEntity(
+                id = UUID.randomUUID().toString(),
+                timestamp = System.currentTimeMillis(),
+                sessionId = session.sessionId,
+                planId = plan.id,
+                toolName = "voice_approval",
+                argumentsJson = JSONObject().put("utterance", utterance).put("disclosureDigest", digest)
+                    .put("callSession", voiceCoordinator.callStatus.value.sessionId ?: "").toString(),
+                planText = plan.steps.joinToString("; ") { it.summary },
+                riskTier = plan.steps.maxByOrNull { it.riskTier.ordinal }?.riskTier?.name ?: "INAPP",
+                effectiveTier = plan.steps.maxByOrNull { it.riskTier.ordinal }?.riskTier?.name ?: "INAPP",
+                triggerProvenance = Provenance.OWNER.name,
+                tainted = plan.tainted,
+                taintSource = plan.taintSource,
+                decision = "confirmed",
+                outcomeDetail = "Owner confirmed by voice during an active local call; not speaker-verified."
+            ))
+        }
+    }
+
+    private suspend fun applyStepAndReport(step: Step): ToolApplyResult {
+        val call = PendingToolCall(step.callId, step.tool, step.arguments, step.summary)
+        val result = runCatching { toolExecutor.execute(call) }
+            .getOrElse { ToolApplyResult("Failed to apply ${call.name}", errorOutput(it.message)) }
+        recordUntrustedTriageObservations(call, result.toolOutput)
+        if (result.confirmation.isNotBlank()) {
+            appendSystemMessage(result.confirmation)
+        }
+        _lastUndo.value = result.undo
+        if (voiceCoordinator.isRealtimeConnected()) {
+            val outputForModel = sanitizeToolOutputForRealtime(call, result.toolOutput)
+            voiceCoordinator.sendToolResult(call.callId, outputForModel)
+        }
+        return result
+    }
+
+    /** Persist validated reader observations, never raw email bodies, as tainted context. */
+    private suspend fun recordUntrustedTriageObservations(call: PendingToolCall, toolOutput: String) {
+        if (call.name != "gmail_triage_inbox") return
+        val items = runCatching { JSONObject(toolOutput).optJSONArray("items") }.getOrNull() ?: return
+        for (index in 0 until items.length()) {
+            val item = items.optJSONObject(index) ?: continue
+            val reader = item.optJSONObject("reader") ?: continue
+            val summary = reader.optString("summary").take(400).ifBlank { continue }
+            val contentRequests = reader.optJSONArray("contentRequests")
+                ?.let { requests -> (0 until requests.length()).mapNotNull { requests.optString(it).takeIf(String::isNotBlank) } }
+                .orEmpty()
+            val observation = buildString {
+                append("Email from ").append(item.optString("from").ifBlank { "unknown sender" })
+                append("; subject: ").append(item.optString("subject").ifBlank { "(no subject)" })
+                append("\nSummary: ").append(summary)
+                if (contentRequests.isNotEmpty()) append("\nContent requests: ").append(contentRequests.joinToString("; "))
+            }
+            appendMessage(
+                ChatMessage(
+                    sender = Sender.ASSISTANT,
+                    content = observation,
+                    provenance = Provenance.UNTRUSTED,
+                    sourceRef = "email:${item.optString("id")}"
+                )
+            )
+        }
+    }
+
+    private suspend fun sendRealtimeResult(callId: String, status: String, message: String) {
+        voiceCoordinator.sendStatusResult(callId, status, message)
+    }
+
+    private suspend fun buildContextBlocks(
+        activeProvider: com.splinch.nethra.assistant.provider.LlmProvider,
+        exposedTools: List<ToolDefinition>
+    ): List<ContextBlock> {
+        val systemBlock = ContextBlock(
+            role = "system",
+            content = AssistantPrompt.forProvider(activeProvider.id) +
+                "\n\nYou are currently running on the '${activeProvider.id}' provider " +
+                "(model: ${activeProvider.workhorseModel}). If asked which AI, model, or provider " +
+                "you are, answer this directly and factually -- never guess from unrelated system " +
+                "or error messages that may appear elsewhere in this conversation." +
+                // Told explicitly rather than inferred, so replies are shaped for
+                // the ear when they're going to be spoken aloud.
+                (if (voiceCoordinator.speechModeEnabled.value) {
+                    "\n\nYour reply will be read aloud. Answer in one or two spoken sentences. Use no markdown, no lists, and " +
+                        "no URLs. If the full answer is long, give the headline and offer to go deeper."
+                 } else {
+                     "\n\nThe owner is typing to you and reading your reply on screen."
+                 }) + (TurnSessionContext.current?.let { "\n\nSession (transient, this turn only): " + it.promptLine() } ?: "") +
+                    "\n\nLocal time: " + java.time.ZonedDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM yyyy, HH:mm")) + " (" + java.time.ZoneId.systemDefault().id + ")." +
+                    "\n\n" + AssistantPrompt.androidCapabilityContext(exposedTools.map { it.name }),
+            provenance = Provenance.NETHRA,
+            sourceRef = "nethra:actor-policy"
+        )
+        val blocks = mutableListOf(systemBlock)
+        memoryService.contextBlock()?.let { blocks.add(it) }
+        toolExecutor.consumeGitHubSourceContext()?.let { source ->
+            blocks.add(ContextBlock(
+                role = "system", content = source, provenance = Provenance.NETHRA, sourceRef = "github:main:ephemeral"
+            ))
+        }
+        // Only the most recent attachment is sent as image bytes. Older ones
+        // replay as their cached one-line description, because re-uploading
+        // every image on every turn made a conversation's cost grow with the
+        // number of pictures in it -- five images meant five base64 blobs per
+        // message, forever, for pictures the model had already described.
+        val newestImageId = _messages.value.lastOrNull { it.imagePath != null }?.id
+        val messageBlocks = _messages.value.map { msg ->
+            val sendBytes = msg.imagePath != null && msg.id == newestImageId
+            val encodedImage = if (sendBytes) msg.imagePath?.let { encodeImageForContext(it) } else null
+            // The PC agent extracts the latest user block as its search goal.
+            // Keep owner text separate from transport IDs and trust metadata.
+            val text = if (activeProvider.id == "local" && msg.provenance != Provenance.UNTRUSTED) {
+                msg.content
+            } else renderContextEnvelope(msg)
+            val content = when {
+                sendBytes || msg.imagePath == null -> text
+                // Fall back to a neutral marker rather than dropping the fact an
+                // image was there, which would make the history read wrongly.
+                else -> text +
+                    "\n[Attached image: ${msg.imageSummary ?: "described earlier in this conversation"}]"
+            }
+            ContextBlock(
+                role = when (msg.sender) {
+                    Sender.USER -> "user"
+                    Sender.ASSISTANT -> "assistant"
+                    Sender.SYSTEM -> "system"
+                },
+                content = content,
+                provenance = msg.provenance,
+                sourceRef = msg.sourceRef,
+                imageBase64 = encodedImage?.first,
+                imageMimeType = encodedImage?.second
+            )
+        }
+        val fixedContextChars = blocks.sumOf { it.content.length + (it.imageBase64?.length ?: 0) }
+        val messageBudget = (MAX_CONTEXT_CHARS - fixedContextChars).coerceAtLeast(0)
+        return blocks + applyContextBudget(messageBlocks, messageBudget)
+    }
+
+    /** Reads and base64-encodes an attached image for the provider payload; called on Dispatchers.IO. */
+    private fun encodeImageForContext(path: String): Pair<String, String>? {
+        return runCatching {
+            val bytes = java.io.File(path).readBytes()
+            val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            base64 to "image/jpeg"
+        }.getOrNull()
+    }
+
+    /**
+     * §Cost control: per-turn context budget. When the assembled context
+     * would exceed [MAX_CONTEXT_CHARS], drop the lowest-value blocks first —
+     * oldest UNTRUSTED content before oldest NETHRA content — and never
+     * drop an OWNER-provenance block. A rough char-based proxy for token
+     * budget; good enough to bound cost without a tokenizer dependency.
+     */
+    private fun applyContextBudget(
+        blocks: List<ContextBlock>,
+        maxChars: Int = MAX_CONTEXT_CHARS
+    ): List<ContextBlock> {
+        // Image bytes count toward the budget. Previously only `content.length`
+        // was measured, so a base64 image -- often larger than the entire text
+        // history -- was treated as free and could blow the real token budget
+        // while this check happily passed.
+        fun ContextBlock.cost() = content.length + (imageBase64?.length ?: 0)
+
+        var total = blocks.sumOf { it.cost() }
+        if (total <= maxChars) return blocks
+
+        val remaining = blocks.toMutableList()
+        for (targetProvenance in listOf(Provenance.UNTRUSTED, Provenance.NETHRA)) {
+            var i = 0
+            while (total > maxChars && i < remaining.size) {
+                val block = remaining[i]
+                if (block.provenance == targetProvenance) {
+                    total -= block.cost()
+                    remaining.removeAt(i)
+                } else {
+                    i++
+                }
+            }
+            if (total <= maxChars) break
+        }
+        return remaining
+    }
+
+    private fun renderContextEnvelope(message: ChatMessage): String {
+        val escaped = escapeContextContent(message.content)
+        val source = message.sourceRef ?: "none"
+        return buildString {
+            append(CONTEXT_OPEN).append('\n')
+            append("origin=").append(message.provenance.name).append('\n')
+            append("sourceRef=").append(source).append('\n')
+            append("role=").append(message.sender.name).append('\n')
+            append("content:\n")
+            append(escaped).append('\n')
+            append(CONTEXT_CLOSE)
+        }
+    }
+
+    private fun escapeContextContent(raw: String): String {
+        return raw
+            .replace(CONTEXT_OPEN, "<escaped:NETHRA_CONTEXT_V1>")
+            .replace(CONTEXT_CLOSE, "<escaped:END_NETHRA_CONTEXT_V1>")
+    }
+
+    /**
+     * Defensive strip for the rare case the model echoes the internal context
+     * envelope format (built by renderContextEnvelope, seen for every prior
+     * turn in its own context) into its own reply instead of just answering
+     * in plain text -- observed in the wild, never something a user should see.
+     */
+    private fun stripLeakedEnvelope(text: String): String {
+        val trimmed = text.trim()
+        if (!trimmed.startsWith(CONTEXT_OPEN)) return text
+        val contentMarker = "content:\n"
+        val contentStart = trimmed.indexOf(contentMarker)
+        if (contentStart == -1) return text
+        val afterContent = trimmed.substring(contentStart + contentMarker.length)
+        val closeIndex = afterContent.indexOf(CONTEXT_CLOSE)
+        return (if (closeIndex == -1) afterContent else afterContent.substring(0, closeIndex)).trim()
+    }
+
+    private suspend fun appendMessage(message: ChatMessage) {
+        conversationCoordinator.append(message)
+        planCoordinator.recordContextBlock(message.provenance, message.sourceRef ?: "chat_message:${message.id}")
+    }
+
+    /**
+     * Describes an attached image once and caches the result on the message, so
+     * later turns can replay it as a short line of text instead of re-uploading
+     * the bytes (see buildContextBlocks). Costs one cheap call per image for the
+     * life of the conversation, versus one image upload per image *per turn*.
+     *
+     * Uses the tool-free reader lane, so a malicious image caption can never
+     * reach the actor and trigger a tool call. Failure is non-fatal: without a
+     * summary the history just says an image was attached.
+     */
+    private suspend fun summarizeAttachedImage(message: ChatMessage) {
+        val path = message.imagePath ?: return
+        if (message.imageSummary != null) return
+
+        val provider = runCatching { providerRouter.activeProvider() }.getOrNull() ?: return
+        val encoded = withContext(Dispatchers.IO) { encodeImageForContext(path) } ?: return
+        val described = runCatching {
+            provider.describeImage(encoded.first, encoded.second)
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: return
+
+        conversationCoordinator.upsert(message.copy(imageSummary = described.take(300)))
+    }
+
+    private fun seedTrustContextFromRecentMessages(messages: List<ChatMessage>) {
+        messages.takeLast(3).forEach { msg ->
+            planCoordinator.recordContextBlock(msg.provenance, msg.sourceRef ?: "chat_message:${msg.id}")
+        }
+    }
+
+    private suspend fun sanitizeToolOutputForRealtime(call: PendingToolCall, rawOutput: String): String {
+        if (!untrustedOutputTools.contains(call.name)) return rawOutput
+
+        planCoordinator.recordContextBlock(Provenance.UNTRUSTED, "tool:${call.name}")
+
+        val provider = providerRouter.activeProvider() ?: return JSONObject()
+            .put("status", "applied")
+            .put("action", call.name)
+            .put("reader", JSONObject().put("summary", "Untrusted content was returned by this tool, but no reader provider is configured."))
+            .toString()
+
+        val readerOutput = provider.readUntrusted(
+            content = rawOutput,
+            sourceHint = "tool:${call.name}"
+        ) ?: return JSONObject()
+            .put("status", "applied")
+            .put("action", call.name)
+            .put("reader", JSONObject().put("summary", "Untrusted content returned by tool; reader output was unavailable."))
+            .toString()
+
+        return toReaderSafeToolOutput(call.name, readerOutput)
+    }
+
+    private fun toReaderSafeToolOutput(action: String, reader: ReaderOutput): String {
+        val entities = JSONArray().apply {
+            reader.entities.forEach { entity ->
+                put(JSONObject().put("type", entity.type).put("value", entity.value))
+            }
+        }
+        val contentRequests = JSONArray().apply {
+            reader.contentRequests.forEach { put(it) }
+        }
+        return JSONObject()
+            .put("status", "applied")
+            .put("action", action)
+            .put("provenance", Provenance.UNTRUSTED.name)
+            .put(
+                "reader",
+                JSONObject()
+                    .put("summary", reader.summary)
+                    .put("entities", entities)
+                    .put("contentRequests", contentRequests)
+                    .put("salience", reader.salience)
+            )
+            .toString()
+    }
+
+    suspend fun clearSession() {
+        voiceCoordinator.disconnect()
+        conversationCoordinator.clear()
+        ensureToolsAlwaysEnabled()
+        voiceCoordinator.initialize(session.speechModeEnabled, voiceCoordinator.backendState.value)
+        planCoordinator.clearActive()
+        pendingRealtimeCalls.clear()
+        rebuildSessionScopedComponents()
+        _streamingAssistant.value = null
+        _lastUndo.value = null
+        appendSystemMessage("Session cleared")
+    }
+
+    /** Chat shelf: every session/project on this device, newest first. */
+    val sessionSummaries: kotlinx.coroutines.flow.Flow<List<ChatSessionSummary>> =
+        conversationCoordinator.sessionSummaries()
+
+    /** Starts a new chat alongside existing ones -- unlike [clearSession], nothing else is touched. */
+    suspend fun startNewChat() {
+        voiceCoordinator.disconnect()
+        conversationCoordinator.startNew()
+        ensureToolsAlwaysEnabled()
+        voiceCoordinator.initialize(session.speechModeEnabled, voiceCoordinator.backendState.value)
+        planCoordinator.clearActive()
+        pendingRealtimeCalls.clear()
+        rebuildSessionScopedComponents()
+        _streamingAssistant.value = null
+        _lastUndo.value = null
+    }
+
+    /** Switches the active chat to an existing session from the shelf. */
+    suspend fun switchToSession(targetSessionId: String) {
+        if (targetSessionId == session.sessionId) return
+        voiceCoordinator.disconnect()
+        conversationCoordinator.switchTo(targetSessionId)
+        ensureToolsAlwaysEnabled()
+        voiceCoordinator.initialize(session.speechModeEnabled, voiceCoordinator.backendState.value)
+        planCoordinator.clearActive()
+        pendingRealtimeCalls.clear()
+        rebuildSessionScopedComponents()
+        _streamingAssistant.value = null
+        _lastUndo.value = null
+    }
+
+    suspend fun renameSession(targetSessionId: String, title: String) {
+        conversationCoordinator.renameSession(targetSessionId, title)
+    }
+
+    /** Deletes a chat from the shelf; if it was the active one, starts a fresh chat in its place. */
+    suspend fun deleteSession(targetSessionId: String) {
+        val wasActive = targetSessionId == session.sessionId
+        conversationCoordinator.deleteSession(targetSessionId)
+        if (wasActive) {
+            voiceCoordinator.disconnect()
+            ensureToolsAlwaysEnabled()
+            voiceCoordinator.initialize(session.speechModeEnabled, voiceCoordinator.backendState.value)
+            planCoordinator.clearActive()
+            pendingRealtimeCalls.clear()
+            rebuildSessionScopedComponents()
+            _streamingAssistant.value = null
+            _lastUndo.value = null
+        }
+    }
+
+    /**
+     * Shortens the conversation to its [keepRecent] newest messages without
+     * ending the session. Unlike [clearSession] this keeps speech mode, the
+     * agent-tools toggle, the session id and the realtime connection intact —
+     * it's for when the history has grown unwieldy to scroll (and expensive to
+     * send as context), not for starting over.
+     *
+     * Durable facts in memory are deliberately untouched: they're a separate
+     * store precisely so that trimming the transcript doesn't lose what the
+     * owner asked Nethra to remember.
+     */
+    suspend fun trimHistory(keepRecent: Int = DEFAULT_TRIM_KEEP) {
+        appendSystemMessage(conversationCoordinator.trim(keepRecent))
+    }
+
+    /** §3.1 owner picks which voice backend speech mode uses; persisted, takes effect on the next speech-mode enable. */
+    suspend fun setVoiceBackend(backend: VoiceBackend) {
+        if (backend == voiceCoordinator.backendState.value) return
+        if (voiceCoordinator.speechModeEnabled.value) setSpeechMode(false)
+        voiceCoordinator.setBackend(backend)
+    }
+
+    /**
+     * Quick-switches the active text-chat provider (the API key for [providerId] must
+     * already be stored). Resets workhorse/frontier model overrides so the new
+     * provider's own defaults apply, rather than carrying over a model name that
+     * belonged to the previous provider.
+     */
+    suspend fun switchProvider(providerId: String, modelId: String = "") {
+        appendSystemMessage(providerRouter.switchProvider(providerId, modelId))
+    }
+
+    /**
+     * Posts a visible, unmissable system message whenever the active provider/model
+     * changes -- switching is never silent, regardless of whether it happened from
+     * the chat header's quick switcher or from Settings.
+     */
+    suspend fun announceProviderSwitch(providerId: String, modelId: String) {
+        appendSystemMessage(providerRouter.switchAnnouncement(providerId, modelId))
+    }
+
+    suspend fun setSpeechMode(enabled: Boolean) {
+        if (enabled == voiceCoordinator.speechModeEnabled.value) return
+        voiceCoordinator.setSpeechMode(enabled)
+        conversationCoordinator.setSpeechMode(enabled)
+    }
+
+    /** Starts a hands-free call without exposing a separate voice/microphone sequence. */
+    suspend fun startVoiceCall() {
+        voiceCoordinator.startCall()
+        conversationCoordinator.setSpeechMode(true)
+    }
+
+    /** Fully ends a call, including its speech session and persistent notification. */
+    suspend fun endVoiceCall() {
+        voiceCoordinator.endCall()
+        conversationCoordinator.setSpeechMode(false)
+    }
+
+    suspend fun setAgentToolsEnabled(enabled: Boolean) {
+        // Kept for binary/source compatibility with older callers. Tool availability
+        // is now a Nethra invariant and cannot be disabled per chat.
+        ensureToolsAlwaysEnabled()
+    }
+
+    private suspend fun ensureToolsAlwaysEnabled() {
+        _agentToolsEnabled.value = true
+        if (!session.agentToolsEnabled) conversationCoordinator.setAgentToolsEnabled(true)
+    }
+
+    fun setMicEnabled(enabled: Boolean) {
+        voiceCoordinator.setMicEnabled(enabled)
+    }
+
+    suspend fun stopResponse() {
+        activeTextTurnJob.getAndSet(null)?.cancel()
+        _streamingAssistant.value = null
+        voiceCoordinator.stopResponse()
+    }
+
+    suspend fun regenerateResponse() {
+        if (!voiceCoordinator.regenerateResponse()) {
+            appendSystemMessage("Realtime session unavailable.")
+        }
+    }
+
+    suspend fun undoLast() {
+        val undo = _lastUndo.value ?: return
+        val message = undo.action.invoke()
+        _lastUndo.value = null
+        appendSystemMessage(message)
+    }
+
+    override fun onRealtimeTextDelta(itemId: String, delta: String) {
+        val current = _streamingAssistant.value
+        if (current == null || current.itemId != itemId) {
+            _streamingAssistant.value = StreamingAssistantMessage(itemId = itemId, content = delta)
+        } else {
+            _streamingAssistant.value = current.copy(content = current.content + delta)
+        }
+    }
+
+    override fun onRealtimeTextDone(itemId: String, text: String) {
+        val content = stripLeakedEnvelope(
+            if (text.isNotBlank()) text else _streamingAssistant.value?.content.orEmpty()
+        )
+        if (content.isNotBlank()) {
+            scope.launch {
+                appendMessage(
+                    ChatMessage(
+                        sender = Sender.ASSISTANT,
+                        content = content,
+                        provenance = Provenance.NETHRA,
+                        sourceRef = "assistant_realtime:$itemId",
+                        modelLabel = "Realtime Voice"
+                    )
+                )
+            }
+        }
+        _streamingAssistant.value = null
+    }
+
+    override fun onRealtimeToolCall(call: ToolCall) {
+        val args = runCatching { JSONObject(call.arguments) }.getOrElse { JSONObject() }
+        val summary = ToolRegistry.summarize(call.name, args)
+        pendingRealtimeCalls.add(PendingToolCall(call.callId, call.name, args, summary))
+    }
+
+    override fun onRealtimeResponseDone() {
+        if (pendingRealtimeCalls.isNotEmpty()) {
+            val calls = pendingRealtimeCalls.toList()
+            pendingRealtimeCalls.clear()
+            val goal = _messages.value.lastOrNull { it.sender == Sender.USER }?.content?.take(120) ?: "Plan"
+            scope.launch { handleProposedPlan(calls, goal) }
+        }
+    }
+
+    override fun onVoiceError(message: String) {
+        // Class-resolution/native-library failures are developer-facing noise,
+        // not something a user should see verbatim (and reads identically on
+        // every retry) — show one clean, stable message instead.
+        val friendly = if (message.startsWith("Failed resolution of:") || message.contains("NoClassDefFoundError")) {
+            "Voice calling isn't available on this build."
+        } else {
+            message
+        }
+        scope.launch {
+            if (_messages.value.lastOrNull()?.content != friendly) {
+                appendSystemMessage(friendly)
+            }
+        }
+    }
+
+    // ── LocalVoiceListener (§3.1 non-Realtime voice backend) ────────────────
+
+    override fun onLocalUtterance(text: String) {
+        if (text.isBlank()) return
+        val pairedSession = voiceCoordinator.activeLocalCallSession().takeIf { voiceCoordinator.isPairedCall() }
+        scope.launch {
+            if (pairedSession != null && (prefs.providerConfigFlow.first().providerId != "local" || voiceCoordinator.activeLocalCallSession() != pairedSession)) return@launch
+            if (handleSpokenApproval(text)) return@launch
+            sendUserMessage(text, inputMode = InputMode.SPOKEN)
+        }
+    }
+
+    override fun onVoiceCallEnded() {
+        voiceApproval.clear()
+        scope.launch {
+            conversationCoordinator.setSpeechMode(false)
+        }
+    }
+
+    private suspend fun handleCommand(command: CommandResult) {
+        when (command) {
+            is CommandResult.Help -> appendSystemMessage(command.text)
+            is CommandResult.Clear -> clearSession()
+            is CommandResult.Trim -> trimHistory(command.keepRecent)
+            is CommandResult.Stats -> appendSystemMessage(buildStatsText())
+            is CommandResult.Export -> appendSystemMessage(exportConversation(command.format))
+            is CommandResult.MemorySearch -> {
+                appendSystemMessage(memoryService.searchText(command.query))
+            }
+            is CommandResult.Who -> appendSystemMessage("Participants: You, Nethra")
+            is CommandResult.Set -> appendSystemMessage("Setting '${command.option}' is not supported yet")
+            is CommandResult.Error -> appendSystemMessage(command.message)
+        }
+    }
+
+    private suspend fun appendSystemMessage(content: String) {
+        appendMessage(
+            ChatMessage(
+                sender = Sender.SYSTEM,
+                content = content,
+                provenance = Provenance.NETHRA,
+                sourceRef = "system"
+            )
+        )
+    }
+
+    private fun buildStatsText(): String {
+        return conversationCoordinator.statsText()
+    }
+
+    private fun exportConversation(format: String): String {
+        return conversationCoordinator.export(format)
+    }
+
+    private suspend fun validateEgress(toolName: String, args: JSONObject): String? {
+        return toolExecutor.validateEgress(toolName, args)
+    }
+
+    private fun errorOutput(message: String?): String {
+        return toolExecutor.errorOutput(message)
+    }
+
+}

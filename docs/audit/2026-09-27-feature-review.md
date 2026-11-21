@@ -1,4 +1,4 @@
-# Junction feature review — 27 September 2026
+# Nethra feature review — 27 September 2026
 
 ## What was actually verified
 
@@ -35,8 +35,8 @@ fixtures and do not exercise a speech service.
 `ToolRegistry.kt` remains the authority. The registered tools are:
 `set_speech_mode`, `set_feed_filter`, `archive_feed_item`, `read_notifications`,
 `get_calendar_agenda`, `schedule_calendar_reminder`, `check_for_updates`,
-`set_setting`, `remember_fact`, `forget_fact`, `list_junction_source`,
-`read_junction_source`, `propose_code_change`, `check_github_change`,
+`set_setting`, `remember_fact`, `forget_fact`, `list_nethra_source`,
+`read_nethra_source`, `propose_code_change`, `check_github_change`,
 `merge_github_change`, `ask_clarification`, `reply_notification`,
 `dismiss_notification`, `open_app`, `open_deeplink`, `launch_intent`,
 `gmail_triage_inbox`, `gmail_draft_reply`, `email_send`, `email_archive`,
@@ -49,23 +49,23 @@ successful device operations.
 
 ## Changes delivered
 
-1. Removed both Junction-related Windows Run entries on this PC. Packaged launch
+1. Removed both Nethra-related Windows Run entries on this PC. Packaged launch
    now sets `openAtLogin: false`, so it does not re-register itself. Rebuilt the
    original `apps/windows/dist/workspace-win-unpacked` runtime, regenerated
-   `Desktop/Junction.lnk`, and launched through it. No OS reboot test was done.
+   `Desktop/Nethra.lnk`, and launched through it. No OS reboot test was done.
 2. Android readiness notice is silent, suppresses repeated alerts/timestamps,
    disables channel sound/vibration/badges, and cancels its service coroutine on
    destruction. **This needs the new APK installed; it is not yet on the phone.**
 3. Removed embedded DAW/Mafioso UI/source and Play Billing dependency from
-   Junction. Generic Projects delegation remains available, including existing
-   repository presets. No conversation or other Junction features were removed.
+   Nethra. Generic Projects delegation remains available, including existing
+   repository presets. No conversation or other Nethra features were removed.
 4. Preserved existing music files with a Settings export control. ZIP contains
    only `music-projects/` and `music-assets/`. Independent DAW imports into a fresh
    studio, refuses overwrite, rejects traversal/duplicate entries, and limits
-   extraction to 512 MiB / 4096 files. The original Junction data is retained.
+   extraction to 512 MiB / 4096 files. The original Nethra data is retained.
 5. Fixed Feed styling rejected by the existing CSP: stylesheet class replaces
    inline style. Security policy was not relaxed.
-6. Fixed legacy `services/junction-functions/chatJunction` source: verified,
+6. Fixed legacy `services/nethra-functions/chatNethra` source: verified,
    revocation-checked Firebase token required before provider access; POST only;
    bounded input/output and timeout; sanitized upstream errors. It now uses
    Node 22's native fetch instead of an undeclared node-fetch dependency.
@@ -73,10 +73,10 @@ successful device operations.
 
 ## Repositories and preservation
 
-- DAW: private [SplinchGit/Junction-DAW](https://github.com/SplinchGit/Junction-DAW),
-  local sibling `../Junction-DAW`, initial commit `9098538`.
+- DAW: private [SplinchGit/Nethra-DAW](https://github.com/SplinchGit/Nethra-DAW),
+  local sibling `../Nethra-DAW`, initial commit `9098538`.
 - Mafioso: [draft PR #1](https://github.com/SplinchGit/Mafioso/pull/1), branch
-  `junction-android-extraction`; independent build in
+  `nethra-android-extraction`; independent build in
   `../0Mafioso/Mafioso/apps/android`. Existing game HEAD matched origin/main at
   `b0c4cb48`; newer uncommitted frontend/backend work was preserved and excluded
   from the extraction commits. There was no newer embedded game engine to merge.
@@ -84,14 +84,14 @@ successful device operations.
   against destination copies before original product files were removed.
 - No signing keys, local properties, Firebase account files, passwords or
   credentials were copied. Both standalone apps retain the proprietary license.
-- Junction's pre-existing dirty work remains in place. No blanket commit, reset,
+- Nethra's pre-existing dirty work remains in place. No blanket commit, reset,
   push or cleanup of that work was performed.
 
 ## Exact checks executed
 
 | Command / check | Result |
 |---|---|
-| Junction `gradlew :app:testDebugUnitTest :app:assembleDebug` using Android Studio JBR | PASS, 134 tests across 22 suites, zero failures/errors; debug APK built |
+| Nethra `gradlew :app:testDebugUnitTest :app:assembleDebug` using Android Studio JBR | PASS, 134 tests across 22 suites, zero failures/errors; debug APK built |
 | DAW `gradlew :app:testDebugUnitTest :app:assembleDebug` | PASS, 11 tests across 3 suites; debug APK built |
 | Mafioso Android `gradlew :app:assembleDebug` | PASS; no standalone instrumented/billing tests yet |
 | `apps/windows: npm test` | PASS, entire configured suite, rerun after extraction and CSP fix |
@@ -99,10 +99,10 @@ successful device operations.
 | `apps/windows: npm run pack:workspace`, `npm run desktop`, shortcut launch | PASS; original runtime location restored; running packaged process observed |
 | `services/pc-companion: npm test` | PASS, 5 tests |
 | `services/build-calculator: npm test` | PASS, 3 new tests with mocked listings |
-| `services/junction-functions: npm test`, `npm run lint` | PASS, 5 new tests; all provider calls mocked |
+| `services/nethra-functions: npm test`, `npm run lint` | PASS, 5 new tests; all provider calls mocked |
 | `node --check services/server/index.js`, `services/functions/index.js` | PASS syntax only, not integration tests |
 | `apps/web: npm run build` | PASS; large-chunk warning remains (~600 kB before gzip) |
-| `python -m unittest discover -s scripts/junction-world -p 'test_*.py'` | PASS, 36 tests |
+| `python -m unittest discover -s scripts/nethra-world -p 'test_*.py'` | PASS, 36 tests |
 | `adb devices -l` | No device available; no APK installed or instrumentation run |
 
 The new auth tests first reproduced unauthorized paid-provider access (four
@@ -119,7 +119,7 @@ Debug builds retain existing AGP experimental-option/deprecated Compose warnings
   to its UI thread; test purchase recovery after page load. Documented in the
   draft PR. No production billing changes or purchases made.
 - **Play package migration:** the new wrapper is `com.splinch.mafioso`; backend
-  defaults still refer to `com.splinch.junction`. Preserve old purchase-token
+  defaults still refer to `com.splinch.nethra`. Preserve old purchase-token
   verification while adding the new package, products and signing configuration.
 - **Cloud audit integrity:** `firestore.rules` describes `audit_log` as append-only
   but currently allows updates. Fix with rule-emulator coverage, including the

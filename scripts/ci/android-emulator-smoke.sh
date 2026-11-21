@@ -3,8 +3,8 @@
 # executes each `script:` line separately under /bin/sh, so the logic lives here.
 set -euo pipefail
 apk="${1:?usage: android-emulator-smoke.sh APK}"
-package=com.splinch.junction
-activity="$package/.app.MainActivity"
+package=com.splinch.junction # Stable installed application ID; source namespace is Nethra.
+activity="$package/com.splinch.nethra.app.MainActivity"
 fail() { echo "$1"; adb logcat -d -t 2000 || true; exit 1; }
 
 test -s "$apk" || fail "APK missing or empty: $apk"
@@ -19,6 +19,6 @@ for _ in $(seq 1 15); do
   adb shell pidof "$package" >/dev/null 2>&1 && break
   sleep 1
 done
-adb shell pidof "$package" >/dev/null 2>&1 || fail "Junction process did not stay alive after launch."
-adb shell dumpsys activity activities | grep -F "$activity" || fail "Junction MainActivity is not present in the foreground activity stack."
+adb shell pidof "$package" >/dev/null 2>&1 || fail "Nethra process did not stay alive after launch."
+adb shell dumpsys activity activities | grep -F "$activity" || fail "Nethra MainActivity is not present in the foreground activity stack."
 echo "Emulator smoke passed."

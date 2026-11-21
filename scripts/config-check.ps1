@@ -41,12 +41,12 @@ if (Test-Path -LiteralPath $gsPath) {
 }
 
 $localProps = Join-Path $root "local.properties"
-$webClientId = Get-PropValue -Path $localProps -Key "JUNCTION_WEB_CLIENT_ID"
-$realtimeEndpoint = Get-PropValue -Path $localProps -Key "JUNCTION_REALTIME_ENDPOINT"
-$realtimeClientSecret = Get-PropValue -Path $localProps -Key "JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT"
-Write-Output ("JUNCTION_WEB_CLIENT_ID: {0}" -f (Mask-Value $webClientId))
-Write-Output ("JUNCTION_REALTIME_ENDPOINT: {0}" -f (Mask-Value $realtimeEndpoint))
-Write-Output ("JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT: {0}" -f (Mask-Value $realtimeClientSecret))
+$webClientId = Get-PropValue -Path $localProps -Key "NETHRA_WEB_CLIENT_ID"
+$realtimeEndpoint = Get-PropValue -Path $localProps -Key "NETHRA_REALTIME_ENDPOINT"
+$realtimeClientSecret = Get-PropValue -Path $localProps -Key "NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT"
+Write-Output ("NETHRA_WEB_CLIENT_ID: {0}" -f (Mask-Value $webClientId))
+Write-Output ("NETHRA_REALTIME_ENDPOINT: {0}" -f (Mask-Value $realtimeEndpoint))
+Write-Output ("NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT: {0}" -f (Mask-Value $realtimeClientSecret))
 
 Write-Output ""
 Write-Output "== Web =="

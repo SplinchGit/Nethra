@@ -67,9 +67,9 @@ test('phone warm request selects its chat model',async t=>{
   const {api}=fixture(t),calls=[];
   api.runtime.prewarm=(model,options)=>{calls.push({model,options});return Promise.resolve(true);};
   api.runtime.modelState=model=>({state:'loading',model});
-  const result=await api.dispatch('nethra.warm',{reason:'chat_open',model:'junction-qwen3-next:80b-q3km'},'warm-80b','android');
-  assert.equal(result.model.model,'junction-qwen3-next:80b-q3km');
-  assert.equal(calls[0].model,'junction-qwen3-next:80b-q3km');
+  const result=await api.dispatch('nethra.warm',{reason:'chat_open',model:'nethra-qwen3-next:80b-q3km'},'warm-80b','android');
+  assert.equal(result.model.model,'nethra-qwen3-next:80b-q3km');
+  assert.equal(calls[0].model,'nethra-qwen3-next:80b-q3km');
   await assert.rejects(api.dispatch('nethra.warm',{model:'untrusted:model'},'bad-model','android'),/model/i);
 });
 test('phone warm-up cannot evict a different model while an objective is running',async t=>{
@@ -77,11 +77,11 @@ test('phone warm-up cannot evict a different model while an objective is running
   assert.equal(store.claim('warm-test',60_000).task.id,task.id);
   let warmed=0;api.runtime.warmerFor=()=>({warm:()=>{warmed++;return Promise.resolve();}});
   api.runtime.modelState=model=>({state:'cold',model});
-  const result=await api.dispatch('nethra.warm',{reason:'chat_open',model:'junction-qwen3-next:80b-q3km'},'warm-other','android');
+  const result=await api.dispatch('nethra.warm',{reason:'chat_open',model:'nethra-qwen3-next:80b-q3km'},'warm-other','android');
   assert.equal(warmed,0);assert.equal(result.model.state,'deferred');assert.match(result.model.reason,/objective/i);
 });
 test('status checks do not prewarm 30B over a running 80B objective',async t=>{
-  const {store,api}=fixture(t);store.create({goal:'Measure response time',model:'junction-qwen3-next:80b-q3km'});store.claim('warm-test',60_000);
+  const {store,api}=fixture(t);store.create({goal:'Measure response time',model:'nethra-qwen3-next:80b-q3km'});store.claim('warm-test',60_000);
   let warmed=0;api.runtime.prewarm=()=>{warmed++;return Promise.resolve();};
   await api.dispatch('nethra.status',{},'status-other','desktop');
   assert.equal(warmed,0);
@@ -92,7 +92,7 @@ test('opening an objective chat creates one durable association and retries reus
   t.after(()=>{store.close();fs.rmSync(dir,{recursive:true,force:true});});
   const api=new NethraApi({store,localData,runtime:{}});
   const task=store.create({goal:'Track coursework'});
-  assert.equal(task.model,'junction-qwen3-next-thinking:80b-q4km');
+  assert.equal(task.model,'nethra-qwen3-next-thinking:80b-q4km');
   const first=await api.dispatch('nethra.openChat',{id:task.id},'first','android');
   const second=await api.dispatch('nethra.openChat',{id:task.id},'second','desktop');
   assert.equal(first.conversationId,second.conversationId);
@@ -127,8 +127,8 @@ test('paired phone creates durable objectives but cannot grant itself PC read ro
 
 test('desktop can select and switch an objective model without changing its work',async t=>{
   const {api,store}=fixture(t);
-  const {task}=await api.dispatch('nethra.create',{goal:'Revise draft',model:'junction-qwen3-next:80b-q3km'},'model-create');
-  assert.equal(task.model,'junction-qwen3-next:80b-q3km');
+  const {task}=await api.dispatch('nethra.create',{goal:'Revise draft',model:'nethra-qwen3-next:80b-q3km'},'model-create');
+  assert.equal(task.model,'nethra-qwen3-next:80b-q3km');
   store.update(task.id,{plan:['Read draft'],contextCheckpoint:{note:'Opening needs focus'}});
   const before=store.get(task.id);
   const {task:switched}=await api.dispatch('nethra.configure',{id:task.id,revision:before.revision,model:'qwen3:30b'},'model-switch');

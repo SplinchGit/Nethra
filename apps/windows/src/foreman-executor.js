@@ -16,7 +16,7 @@ function detectedVerification(root){
  if(fs.existsSync(path.join(root,'package.json'))){try{const p=JSON.parse(fs.readFileSync(path.join(root,'package.json'),'utf8'));if(p.scripts?.test)return [{command:[process.platform==='win32'?'npm.cmd':'npm','test'],cwd:'.',protectedPaths:['test','tests','__tests__','package.json','package-lock.json']}];}catch{}}
  if(fs.existsSync(path.join(root,'project.godot')))return [{command:['godot','--headless','--path','.','--editor','--quit'],cwd:'.',protectedPaths:['tests','project.godot']}];
  if(fs.readdirSync(root).some(name=>name.endsWith('.sln')))return [{command:['dotnet','test','--no-restore'],cwd:'.',protectedPaths:[]}];
- return [{command:['git','diff','--check','junction/verified'],cwd:'.',protectedPaths:[]}];
+ return [{command:['git','diff','--check','nethra/verified'],cwd:'.',protectedPaths:[]}];
 }
 function retryDeadline(value,now=Date.now()){
  const groups=value?.rateLimitsByLimitId?Object.values(value.rateLimitsByLimitId):value?.rateLimits?[value.rateLimits]:[];
@@ -52,7 +52,7 @@ function engineeringPacket(p,t,{patchOnly=false}={}){return [
  `Objective (owner approved): ${p.objective}\nJames has explicitly started this scoped implementation task and approved ordinary reversible implementation and testing. Execute it now. Do not ask for another design/process confirmation or stop at a plan; report only genuinely missing product decisions or external authority.`, `Architecture: ${p.handoff||'Inspect only the registered project. Preserve working systems.'}\nDecisions: ${JSON.stringify(p.decisions||[])}`,
  `Exact task: ${t.title}`,`Relevant files: ${JSON.stringify(t.files||[])}; work only within the supplied checkout. Baseline: ${p.verifiedSha||p.baseSha}`,
  ...(patchOnly?[`Protected files: Foreman rejects the whole patch if it touches any test file or folder (test/, tests/, __tests__/, *.test.*, *.spec.*), package.json, lockfiles, config or build files, or .github.${p.scopeFile?` Only ${p.scopeFile} may change.`:''} Change production source only; the owner's fixed verification commands test it.`]:[]),
- 'Constraints: small reversible changes; no network, credentials, system changes, other repositories, push, merge, or weakened tests. Never change .git, .codex, hooks, or security controls. Do not run dependency install scripts. Do not commit: verification records a detached checkpoint; canonical commits remain with the authorised engineering session. If authority or a product decision is missing, finish with JUNCTION_DECISION_REQUIRED: followed by the question.',
+ 'Constraints: small reversible changes; no network, credentials, system changes, other repositories, push, merge, or weakened tests. Never change .git, .codex, hooks, or security controls. Do not run dependency install scripts. Do not commit: verification records a detached checkpoint; canonical commits remain with the authorised engineering session. If authority or a product decision is missing, finish with NETHRA_DECISION_REQUIRED: followed by the question.',
  `Previous attempts: ${JSON.stringify(t.attempts.slice(-3)).slice(-10000)}`,`Build/test failures: ${t.attempts.filter(a=>a.error).map(a=>a.error).slice(-3).join('\n')||'None recorded'}`,
  ...(patchOnly&&t.attempts.some(a=>/patch does not apply|patch failed:/i.test(a.error||''))?['The previous patch did not match the current source. Read the exact live file contents again and generate a fresh diff with unchanged context copied verbatim. Use the current source as the baseline.']:[]),
  `Acceptance criteria: ${t.acceptance}`,patchOnly?'Requested output: return the raw unified Git diff, starting with diff --git. Foreman runs verification.':`Requested output: implement this one task, then a concise summary of changes and remaining risks. Verification commands are fixed by the owner: ${JSON.stringify(p.verification)}`
@@ -76,16 +76,16 @@ class ForemanExecutor{
   if(p.sharedCheckout&&(!p.sharedSourceHash||await this.sourceHash(p.repoPath,false,p.scopeKind)!==p.sharedSourceHash))throw new Error('Shared checkout changed since verification; verify again before review');
   if((await this.git(p.worktree,['status','--porcelain'])).trim())throw new Error('Candidate has unverified changes');
   const head=(await this.git(p.worktree,['rev-parse','HEAD'])).trim();if(head!==p.verifiedSha)throw new Error('Candidate moved since verification');
-  const diff=await this.git(p.worktree,['diff','--binary','junction/verified',head]);
-  return {headSha:head,sourceHash:p.sourceHash,diffHash:crypto.createHash('sha256').update(diff).digest('hex'),summary:await this.git(p.worktree,['diff','--stat','junction/verified',head]),patch:diff};
+  const diff=await this.git(p.worktree,['diff','--binary','nethra/verified',head]);
+  return {headSha:head,sourceHash:p.sourceHash,diffHash:crypto.createHash('sha256').update(diff).digest('hex'),summary:await this.git(p.worktree,['diff','--stat','nethra/verified',head]),patch:diff};
  }
  async promoteVerified(p,result){
-  const workspace=p.worktree||result.worktree,head=result.headSha,base=p.verifiedSha||'junction/verified';if(!workspace||!head)throw new Error('Verified candidate is incomplete');
+  const workspace=p.worktree||result.worktree,head=result.headSha,base=p.verifiedSha||'nethra/verified';if(!workspace||!head)throw new Error('Verified candidate is incomplete');
   if(await this.sourceHash(p.repoPath,false,p.scopeKind)!==p.sourceHash)throw new Error('The original work scope changed during verification; the verified candidate was preserved and nothing was overwritten');
   const names=(await this.git(workspace,['diff','--name-only','-z',base,head])).split('\0').filter(Boolean);if(names.some(name=>!relative(name)||forbidden.test(name)))throw new Error('Verified candidate contains an unsafe path');if(p.scopeFile&&names.some(name=>name!==p.scopeFile))throw new Error('Verified candidate changed files outside the owner-named file scope');
   const backup=path.join(this.directory,p.id,'backups',String(Date.now()));fs.mkdirSync(backup,{recursive:true});const changes=[];
   for(const name of names){const source=path.join(workspace,name),target=path.join(p.repoPath,name),existed=fs.existsSync(target);if(existed){const saved=path.join(backup,name);fs.mkdirSync(path.dirname(saved),{recursive:true});fs.copyFileSync(target,saved);}changes.push({name,source,target,existed,deleted:!fs.existsSync(source)});}
-  try{for(const change of changes){if(change.deleted){if(fs.existsSync(change.target))fs.unlinkSync(change.target);continue;}const stat=fs.lstatSync(change.source);if(!stat.isFile()||stat.isSymbolicLink())throw new Error('Verified candidate contains an unsupported file');fs.mkdirSync(path.dirname(change.target),{recursive:true});const temp=`${change.target}.junction-${crypto.randomUUID()}.tmp`;fs.copyFileSync(change.source,temp);fs.renameSync(temp,change.target);}}
+  try{for(const change of changes){if(change.deleted){if(fs.existsSync(change.target))fs.unlinkSync(change.target);continue;}const stat=fs.lstatSync(change.source);if(!stat.isFile()||stat.isSymbolicLink())throw new Error('Verified candidate contains an unsupported file');fs.mkdirSync(path.dirname(change.target),{recursive:true});const temp=`${change.target}.nethra-${crypto.randomUUID()}.tmp`;fs.copyFileSync(change.source,temp);fs.renameSync(temp,change.target);}}
   catch(error){for(const change of changes.reverse()){try{if(change.existed){fs.mkdirSync(path.dirname(change.target),{recursive:true});fs.copyFileSync(path.join(backup,change.name),change.target);}else if(fs.existsSync(change.target))fs.unlinkSync(change.target);}catch{}}throw error;}
   fs.writeFileSync(path.join(backup,'manifest.json'),JSON.stringify({project:p.id,base,head,files:changes.map(({name,existed,deleted})=>({name,existed,deleted}))},null,2));
   return {backup,sourceHash:await this.sourceHash(p.repoPath,false,p.scopeKind),files:names};
@@ -94,7 +94,7 @@ class ForemanExecutor{
   if(!p.reviewed)throw new Error('Review the exact candidate first');const review=await this.review(p);
   if(review.headSha!==p.reviewed.headSha||review.diffHash!==p.reviewed.diffHash)throw new Error('Candidate changed; review again');
   if(p.sharedCheckout)return {summary:'Verified shared-checkout changes reviewed. No files staged or committed; the authorised engineer owns integration.'};
-  if((await this.git(p.repoPath,['status','--porcelain'])).trim())throw new Error('Original checkout has uncommitted work. Commit it before applying; Junction will not discard it.');
+  if((await this.git(p.repoPath,['status','--porcelain'])).trim())throw new Error('Original checkout has uncommitted work. Commit it before applying; Nethra will not discard it.');
   if(await this.sourceHash(p.repoPath,false,p.scopeKind)!==p.sourceHash)throw new Error('Original project changed; rebase and re-verify before integration');
   if(!review.patch.trim())throw new Error('No changes to apply');
   const patch=path.join(this.directory,p.id,'reviewed.patch');fs.writeFileSync(patch,review.patch);
@@ -126,8 +126,8 @@ class ForemanExecutor{
    for(const name of new Set(names)){if(signal.aborted)throw new Error('Paused');if(!relative(name)||forbidden.test(name))continue;const source=path.join(p.repoPath,name);if(!fs.existsSync(source))continue;const stat=fs.lstatSync(source);if(stat.isSymbolicLink()||!stat.isFile())throw new Error('Project contains unsupported symlink or special file');const real=fs.realpathSync(source);if(!real.startsWith(fs.realpathSync(p.repoPath)+path.sep))throw new Error('Project path escapes repository');size+=stat.size;if(stat.size>32*1024*1024||size>512*1024*1024)throw new Error('Project snapshot exceeds safety limit');const target=path.join(workspace,name);fs.mkdirSync(path.dirname(target),{recursive:true});fs.copyFileSync(source,target);}
    await this.git(workspace,['add','--all']);
    const tree=(await this.git(workspace,['write-tree'])).trim();
-   const baseline=(await this.git(workspace,['-c','user.name=Junction','-c','user.email=junction@localhost','commit-tree',tree,'-m','Owner project working-state checkpoint'])).trim();
-   await this.git(workspace,['update-ref','refs/tags/junction/verified',baseline]);
+   const baseline=(await this.git(workspace,['-c','user.name=Nethra','-c','user.email=nethra@localhost','commit-tree',tree,'-m','Owner project working-state checkpoint'])).trim();
+   await this.git(workspace,['update-ref','refs/tags/nethra/verified',baseline]);
    await this.git(workspace,['switch','--detach',baseline]);
   }
   const activeBranch=(await this.git(workspace,['branch','--show-current'])).trim();
@@ -136,7 +136,7 @@ class ForemanExecutor{
   return workspace;
  }
  async handoff(cwd,p,t,summary){
-  const base=p.verifiedSha||'junction/verified';
+  const base=p.verifiedSha||'nethra/verified';
   const changed=(await this.workingGit(p,cwd,['diff','--name-only',base])).trim().split(/\r?\n/).filter(Boolean);
   const untracked=(await this.git(cwd,['ls-files','--others','--exclude-standard'])).trim().split(/\r?\n/).filter(Boolean);
   if([...changed,...untracked].some(file=>!relative(file)||forbidden.test(file)))throw new Error('Handoff contains a protected path');
@@ -327,7 +327,7 @@ class ForemanExecutor{
       // Resume this task's earlier Claude session when it ran in the same directory; the session is saved before the turn.
       const earlier=t.attempts.slice(0,-1).reverse().find(a=>a.claudeSession?.cwd===cwd)?.claudeSession;
       const call=(session)=>this.runClaude({workingDirectory:cwd,prompt:engineeringPacket(p,t,{patchOnly:true})+'\nHandoff: '+JSON.stringify(handoff)+'\nApproved editable source: '+JSON.stringify(sources)+(session.resumeSessionId?'\nThis continues your earlier session on this task. The files above are their current state; trust them over your memory.':''),
-        subscriptionOnly:true,...session,systemPrompt:'Implement the approved task as a unified Git diff only. Edit only the supplied files. You have no tools. Return JUNCTION_DECISION_REQUIRED if more files or authority are required.',signal,
+        subscriptionOnly:true,...session,systemPrompt:'Implement the approved task as a unified Git diff only. Edit only the supplied files. You have no tools. Return NETHRA_DECISION_REQUIRED if more files or authority are required.',signal,
         onRateLimit:snapshot=>this.advisorLimits?.recordClaude(snapshot)});
       const fresh=()=>{const id=crypto.randomUUID();checkpoint({claudeSession:{id,cwd}});return {sessionId:id};};
       if(earlier){checkpoint({claudeSession:earlier});try{result=await call({resumeSessionId:earlier.id});}catch(error){
@@ -345,7 +345,7 @@ class ForemanExecutor{
       throw Object.assign(error,{retryAt:Math.min(capacity,claudeRetryAt),capacityDetail:'Waiting for confirmed provider capacity'});
      }
      signal.throwIfAborted();
-     if(result.content.startsWith('JUNCTION_DECISION_REQUIRED:'))throw new Error(result.content.slice(0,2000));
+     if(result.content.startsWith('NETHRA_DECISION_REQUIRED:'))throw new Error(result.content.slice(0,2000));
      if((await this.sourceHash(cwd,true))!==handoff.sourceHash)throw new Error('Worktree changed during Claude handoff; reconcile before applying the candidate');
      if(p.sharedCheckout)await this.applySharedPatch(p,cwd,result.content,checks,handoff.sourceHash,signal);
      else await this.applyClaudePatch(cwd,result.content,sources,signal);
@@ -368,7 +368,7 @@ class ForemanExecutor{
        throw Object.assign(new Error('Codex handoff is ready'),{retryAt:Date.now()+1000});
       }
       checkpoint({summary:result.text.slice(-2000)});
-      if(result.text.includes('JUNCTION_DECISION_REQUIRED:'))throw new Error(result.text.slice(result.text.indexOf('JUNCTION_DECISION_REQUIRED:')).slice(0,2000));
+      if(result.text.includes('NETHRA_DECISION_REQUIRED:'))throw new Error(result.text.slice(result.text.indexOf('NETHRA_DECISION_REQUIRED:')).slice(0,2000));
      }catch(error){
       if(p.autoHandoff&&!error.retryAt&&!signal.aborted&&/rate.?limit|quota|usage.?limit|capacity/i.test(error.message)){
        const handoff=await this.handoff(cwd,p,t,error.message);
@@ -381,7 +381,7 @@ class ForemanExecutor{
    }
    // Shared patches have already been checked against the live source and approved paths.
    // The detached baseline can predate legitimate canonical commits and uses different ignore rules.
-   const changed=p.sharedCheckout?[]:(await this.git(cwd,['diff','--name-only',p.verifiedSha||'junction/verified'])).split(/\r?\n/).filter(Boolean);
+   const changed=p.sharedCheckout?[]:(await this.git(cwd,['diff','--name-only',p.verifiedSha||'nethra/verified'])).split(/\r?\n/).filter(Boolean);
    const added=p.sharedCheckout?[]:(await this.git(cwd,['ls-files','--others','--exclude-standard'])).split(/\r?\n/).filter(Boolean);
    if(p.scopeFile&&[...changed,...added].some(f=>f!==p.scopeFile))throw new Error('Candidate changed files outside the owner-named file scope');
    if([...changed,...added].some(f=>forbidden.test(f)))throw new Error('Candidate touched a protected path');
@@ -424,9 +424,9 @@ class ForemanExecutor{
     saveProgress();
    }
    signal.throwIfAborted();
-   const finalNames=[...(await this.git(cwd,['diff','--name-only',p.verifiedSha||'junction/verified'])).split(/\r?\n/),...(await this.git(cwd,['ls-files','--others','--exclude-standard'])).split(/\r?\n/)].filter(Boolean);if(finalNames.some(f=>forbidden.test(f)))throw new Error('Verification created a protected file');
+   const finalNames=[...(await this.git(cwd,['diff','--name-only',p.verifiedSha||'nethra/verified'])).split(/\r?\n/),...(await this.git(cwd,['ls-files','--others','--exclude-standard'])).split(/\r?\n/)].filter(Boolean);if(finalNames.some(f=>forbidden.test(f)))throw new Error('Verification created a protected file');
    await this.git(cwd,['add','--all']);
-   if((await this.git(cwd,['diff','--cached','--name-only'])).trim())await this.git(cwd,['-c','user.name=Junction','-c','user.email=junction@localhost','commit','-m',`Verified task ${t.id}: ${t.title}`]);
+   if((await this.git(cwd,['diff','--cached','--name-only'])).trim())await this.git(cwd,['-c','user.name=Nethra','-c','user.email=nethra@localhost','commit','-m',`Verified task ${t.id}: ${t.title}`]);
    const headSha=(await this.git(cwd,['rev-parse','HEAD'])).trim();
    checkpoint({headSha,tests,summary:'Candidate committed after verification'});
    if(p.sharedCheckout&&sharedSourceHash!==await this.sourceHash(p.repoPath,false,p.scopeKind))throw new Error('Shared source changed during verification; verify again before reporting success');

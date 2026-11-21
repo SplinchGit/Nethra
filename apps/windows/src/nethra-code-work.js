@@ -4,11 +4,11 @@ const path=require('node:path');
 const measurableAcceptance=value=>typeof value==='string'&&value.trim().length>=30;
 const reviewVerdict=value=>/^VERDICT:\s*(READY|REVISE)\b/i.exec(String(value||'').trim())?.[1]?.toUpperCase()||null;
 
-function createCodeWorkProposer({foreman,junctionRepository,assertObjective=null}){
+function createCodeWorkProposer({foreman,nethraRepository,assertObjective=null}){
   return async ({objective,description,acceptance,review})=>{
     assertObjective?.(objective.id);
-    const root=fs.realpathSync(junctionRepository);
-    if(!objective.allowCodeWork||!(objective.readRoots||[]).some(item=>{try{return fs.realpathSync(item)===root;}catch{return false;}}))throw new Error('Approve the Junction read folder and Codex work on Windows first');
+    const root=fs.realpathSync(nethraRepository);
+    if(!objective.allowCodeWork||!(objective.readRoots||[]).some(item=>{try{return fs.realpathSync(item)===root;}catch{return false;}}))throw new Error('Approve the Nethra read folder and Codex work on Windows first');
     const reviewer=review?.source==='codex'?'Codex':review?.source==='claude'?'Claude':null;
     if(!reviewer||reviewVerdict(review.advice)!=='READY')throw new Error('Codex or Claude must return a READY verdict for this exact code proposal');
     if(!measurableAcceptance(acceptance))throw new Error('Provide measurable acceptance criteria before creating a code draft');

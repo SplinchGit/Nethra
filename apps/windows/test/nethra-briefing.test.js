@@ -15,14 +15,14 @@ test('busy voice briefing retains owner decisions and scheduler facts within its
   const now=Date.UTC(2026,10,11,12);
   const text=situationContext({now,timeZone:'Europe/London',surface:'android-relay',
     session:sanitizeSession({mode:'voice',voiceActive:true,spokenOutput:true,input:'spoken',sessionId:'a'.repeat(64),elapsedMs:123456,callState:'reconnecting'}),
-    linked:{goal:'Funding strategy',status:'WAITING_FOR_USER',model:'junction-qwen3-next:80b-q3km',allowCodeWork:true,lastAccomplished:{at:now-60000,line:'Read verified sources'},next:'Confirm eligible country',waitingFor:{kind:'question',detail:'Which country should the plan cover?'}},
+    linked:{goal:'Funding strategy',status:'WAITING_FOR_USER',model:'nethra-qwen3-next:80b-q3km',allowCodeWork:true,lastAccomplished:{at:now-60000,line:'Read verified sources'},next:'Confirm eligible country',waitingFor:{kind:'question',detail:'Which country should the plan cover?'}},
     objectives:[{goal:'Funding strategy',status:'WAITING_FOR_USER'}],pendingApprovals:2,schedulerRunning:false,
     presence:{phone:{state:'stale',ageMs:3600000,via:'relay'}},sources:{calendar:{status:'CONNECTED',lastSyncAt:now-1000},gmail:{status:'STALE',lastSyncAt:now-1000}},
     capabilities:['web_search','start_objective','list_objectives','get_objective','delegate_to_codex']});
   assert.ok(text.length<=2400);assert.match(text,/Which country/);assert.match(text,/2 pending approvals/);
   assert.match(text,/background scheduler is not running/);assert.match(text,/will be spoken aloud/);
   assert.match(text,/Honesty:/);assert.ok(text.endsWith('.'),'never cut a fact midway');
-  assert.match(text,/junction-qwen3-next:80b-q3km/);
+  assert.match(text,/nethra-qwen3-next:80b-q3km/);
   assert.match(text,/voice does not grant approval/);
 });
 
@@ -47,7 +47,7 @@ test('briefing preserves a completed linked objective and does not invent a link
 
 test('local voice facts reach the existing model pipeline for both supported models',async()=>{
   const {LocalAgentRuntime}=require('../src/local-agent-runtime');
-  for(const model of ['qwen3:30b','junction-qwen3-next:80b-q3km']){
+  for(const model of ['qwen3:30b','nethra-qwen3-next:80b-q3km']){
     const requests=[];
     const runtime=new LocalAgentRuntime({fetchImpl:async(url,options={})=>{
       if(url.endsWith('/api/ps'))return {ok:true,json:async()=>({models:[{name:model,context_length:8192}]})};

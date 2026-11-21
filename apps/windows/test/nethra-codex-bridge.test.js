@@ -133,7 +133,7 @@ test('a scoped code proposal creates one paused Work Activity draft and reuses i
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-code-scope-'));
   fs.mkdirSync(path.join(root,'apps','windows'),{recursive:true});t.after(()=>fs.rmSync(root,{recursive:true,force:true}));
   const projects=[],foreman={list:()=>projects,create:async input=>{const project={id:`draft-${projects.length+1}`,status:'DRAFT',...input};projects.push(project);return project;}};
-  const propose=createCodeWorkProposer({foreman,junctionRepository:root});
+  const propose=createCodeWorkProposer({foreman,nethraRepository:root});
   const objective={id:'task-1',goal:'Self Improvement',conversationId:'chat-1',allowCodeWork:true,readRoots:[root]};
   const input={objective,description:'Reduce Nethra latency',acceptance:'A before and after benchmark passes',review:{source:'codex',model:'Codex test',advice:'VERDICT: READY\nMeasure baseline first.'}};
   const result=await propose(input);
@@ -151,7 +151,7 @@ test('a scoped code proposal creates one paused Work Activity draft and reuses i
   assert.equal(projects.length,3);
   assert.ok(projects[2].tasks[0].title.length<=240);
   assert.match(projects[2].objective,/full scoped proposal/);
-  await assert.rejects(propose({...input,objective:{...objective,readRoots:[]}}),/Approve the Junction read folder/);
+  await assert.rejects(propose({...input,objective:{...objective,readRoots:[]}}),/Approve the Nethra read folder/);
 });
 
 test('when Codex is resting Claude reviews the exact proposal, so one engineer works at a time',async()=>{

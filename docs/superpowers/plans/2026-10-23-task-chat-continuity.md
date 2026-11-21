@@ -44,7 +44,7 @@
 
 ### Task 3: Android navigation and strip
 
-**Files:** `apps/android/src/main/java/com/splinch/junction/feature/projects/NethraPanel.kt`, `apps/android/src/main/java/com/splinch/junction/feature/chat/ui/ChatScreen.kt`, chat sync and related tests.
+**Files:** `apps/android/src/main/java/com/splinch/nethra/feature/projects/NethraPanel.kt`, `apps/android/src/main/java/com/splinch/nethra/feature/chat/ui/ChatScreen.kt`, chat sync and related tests.
 
 - [ ] Write tests for objective/chat mapping and duplicate navigation; verify failure.
 - [ ] Implement open-or-create through the paired host and a compact chat strip.

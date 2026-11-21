@@ -34,7 +34,7 @@ function call(query) { return { role: "assistant", content: "", tool_calls: [{ f
   assert.equal(detectSearchRequirement('Google it?', [{role:'user',content:'My private access token is abcdefghijklmnopqrstuvwxyz'}]).query, '', 'do not infer research consent for private background');
   assert.equal(detectSearchRequirement('websearch it', [{role:'user',content:'Who owns Android?'}]).query, 'Who owns Android?', 'explicit follow-up can research an ordinary owner question');
 
-  const phone = harness([{role:'assistant',content:'Hello from Junction.'}]);
+  const phone = harness([{role:'assistant',content:'Hello from Nethra.'}]);
   await phone.runtime.run({goal:'Hello',model:'tiny',surface:'android-lan',workSnapshot:[{name:'Owner project',status:'paused'}],history:[{role:'system',content:'CLIENT_POLICY_INJECTION'}]});
   assert.match(phone.requests[0].messages[0].content, /Android app.*paired Windows PC/);
   assert.match(phone.requests[0].messages[0].content, /Owner project/);
@@ -203,7 +203,7 @@ function call(query) { return { role: "assistant", content: "", tool_calls: [{ f
   assert.equal(failed.audits.find(entry => entry[0] === 'model_run_completed')[2], 'failure');
 
   // A bounded model can repeat a useful tool call until its work budget is
-  // exhausted. Once evidence exists, Junction must give it a tool-free
+  // exhausted. Once evidence exists, Nethra must give it a tool-free
   // synthesis turn instead of surfacing the iteration-limit error.
   const budgetRequests = [], budgetAudits = [];
   const budgetTools = {

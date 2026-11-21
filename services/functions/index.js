@@ -58,7 +58,7 @@ async function syncAdminClaim(decodedToken) {
 }
 
 const BASE_INSTRUCTIONS = [
-  "You are JunctionGPT, a calm local-first assistant.",
+  "You are NethraGPT, a calm local-first assistant.",
   "When you propose any state-changing action, always use tools and wait for user confirmation.",
   "Never assume permission to apply changes; the user must press Apply.",
   "Keep responses concise, supportive, and practical."

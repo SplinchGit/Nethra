@@ -1,4 +1,5 @@
 "use strict";
+require("../src/brand-compatibility").inheritEnvironment();
 
 const fs = require("node:fs");
 const path = require("node:path");
@@ -62,7 +63,7 @@ function validateRuntimeDependencies(staging) {
 
 async function main() {
   const root = path.resolve(__dirname, "..");
-  const outputName = process.env.JUNCTION_PACK_OUTPUT || "workspace-win-unpacked";
+  const outputName = process.env.NETHRA_PACK_OUTPUT || "workspace-win-unpacked";
   if (!/^[a-z0-9_-]+$/i.test(outputName)) throw new Error("Invalid workspace package output name.");
   const output = path.join(root, "dist", outputName);
   const staging = path.join(root, "dist", ".workspace-app");
@@ -71,8 +72,8 @@ async function main() {
   fs.mkdirSync(path.join(output, "resources"), { recursive: true });
   fs.mkdirSync(staging, { recursive: true });
   fs.cpSync(path.join(root, "node_modules", "electron", "dist"), output, { recursive: true });
-  fs.renameSync(path.join(output, "electron.exe"), path.join(output, "Junction.exe"));
-  embedApplicationIcon(path.join(output, "Junction.exe"), path.join(root, "assets", "junction.ico"));
+  fs.renameSync(path.join(output, "electron.exe"), path.join(output, "Nethra.exe"));
+  embedApplicationIcon(path.join(output, "Nethra.exe"), path.join(root, "assets", "nethra.ico"));
   fs.cpSync(path.join(root, "src"), path.join(staging, "src"), { recursive: true });
   fs.cpSync(path.join(root, "renderer"), path.join(staging, "renderer"), { recursive: true });
   fs.cpSync(path.join(root, "assets"), path.join(staging, "assets"), { recursive: true });

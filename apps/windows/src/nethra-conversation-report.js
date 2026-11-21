@@ -35,7 +35,7 @@ function postQuestions(task,store,localData,{settings=null,date=new Date()}={}){
     const conversationId=question.conversationId||task.conversationId;
     if(!conversationId||!localData.conversation(conversationId))continue;
     const text=`${question.question}\n\nI’m continuing the available work while you decide.`;
-    if(localData.addMessageOnce(conversationId,question.id,'assistant',text,'JUNCTION').created)posted++;
+    if(localData.addMessageOnce(conversationId,question.id,'assistant',text,'NETHRA').created)posted++;
   }
   return posted;
 }
@@ -51,7 +51,7 @@ function postMilestones(task,store,localData,{settings=null,date=new Date()}={})
     if(!summary||(settings&&!policy.milestones)){localData.markMilestoneDelivered(task.id,event.seq);continue;}
     const messageId=`nethra-milestone-${event.seq}`;
     const text=`Update on "${String(task.goal||'').slice(0,160)}": ${summary}\n\nI’ll keep monitoring. The next check is saved in Tasks.`;
-    if(localData.addMessageOnce(task.conversationId,messageId,'assistant',text,'JUNCTION').created)posted++;
+    if(localData.addMessageOnce(task.conversationId,messageId,'assistant',text,'NETHRA').created)posted++;
     localData.markMilestoneDelivered(task.id,event.seq);
   }
   return posted;
@@ -87,7 +87,7 @@ function postOutcome(task,store,localData,{settings=null,date=new Date()}={}){
   try{episode=(store.recentTaskEvents?.(task.id,100)||[]).find(event=>event.detail?.status===task.status)?.seq??episode;}catch{}
   const digest=createHash('sha256').update(`${task.status}\n${task.summary||''}\n${episode}`).digest('hex').slice(0,16);
   const messageId=`nethra-outcome-${task.id}-${digest}`.replace(/[^A-Za-z0-9_-]/g,'_').slice(0,160);
-  return localData.addMessageOnce(conversationId,messageId,'assistant',outcomeText(task,store),'JUNCTION').created;
+  return localData.addMessageOnce(conversationId,messageId,'assistant',outcomeText(task,store),'NETHRA').created;
 }
 
 /**
@@ -103,7 +103,7 @@ function postCoordinationChat(task,localData,project=null){
   let changed=false;
   const post=(key,content)=>{
     const digest=createHash('sha256').update(JSON.stringify([task.id,key])).digest('hex');
-    changed=localData.addMessageOnce(id,`coordination-${digest}`,'assistant',content,'JUNCTION').created||changed;
+    changed=localData.addMessageOnce(id,`coordination-${digest}`,'assistant',content,'NETHRA').created||changed;
   };
   for(const [provider,label] of [['codex','Codex / OpenAI'],['claude','Claude / Anthropic']]){
     const receipt=task.coordination?.advisors?.[provider];
@@ -184,7 +184,7 @@ function queueMissedWakeNotification(store,queue,{date=new Date()}={}){
   const count=eligible.length;
   return queue.enqueueNotification({requestId:eventId,taskId,deviceId:settings.notificationDeviceId,args:{
     eventId,taskId,title:'Nethra is catching up',
-    body:`${count} scheduled task${count===1?' was':'s were'} overdue when Junction started. Open Tasks to review progress.`
+    body:`${count} scheduled task${count===1?' was':'s were'} overdue when Nethra started. Open Tasks to review progress.`
   }});
 }
 

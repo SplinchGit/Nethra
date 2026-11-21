@@ -36,7 +36,7 @@ Ruling: use the Node/Electron built-in SQLite engine, avoiding a native addon pa
 
 Ruling: perform all project commands through Codex App Server sandboxed command execution, including independent verification. No unrestricted host-shell fallback.
 
-Baseline: original Junction changes copied into a separate managed worktree and checkpointed. Original Civlets files are read-only inputs until explicit onboarding.
+Baseline: original Nethra changes copied into a separate managed worktree and checkpointed. Original Civlets files are read-only inputs until explicit onboarding.
 
 Implemented: durable SQLite project/task/event state, explicit activation, crash recovery to PAUSED, bounded retry scheduling, isolated Git candidate repositories, sandboxed Codex and verification execution, exact-diff review/apply, Windows status and controls, paired Android status and controls, and preservation of the existing Android audit surface.
 

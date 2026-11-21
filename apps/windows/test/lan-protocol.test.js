@@ -52,7 +52,7 @@ assert.equal(isRevoked({ revokedAt: 100 }, 100), true);
 const ignored = fs.readFileSync(path.join(__dirname, "..", ".gitignore"), "utf8");
 for (const pattern of ["lan-tls", "lan-instance", "lan-pairing", "lan-revocation", "lan-tokens", "\\*.key", "\\*.crt", "\\*.pem"]) assert.match(ignored, new RegExp(pattern));
 
-const directory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-lan-identity-test-"));
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-lan-identity-test-"));
 const MAX_ONE_TIME_TOKENS = 256;
 const MAX_ONE_TIME_TOKEN_STORAGE_BYTES = 64 * 1024;
 const safeStorage = {
@@ -75,7 +75,7 @@ const expired = identity.createOneTimeToken({ now: 1000, ttlMs: 1000 });
 assert.equal(identity.consumeOneTimeToken(expired.token, 2000), null);
 identity.createOneTimeToken({ now: 3000, ttlMs: 1000 });
 assert.equal(Object.keys(identity.getOneTimeTokens()).length, 1);
-const boundedDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-lan-identity-bound-test-"));
+const boundedDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-lan-identity-bound-test-"));
 const boundedIdentity = new LanIdentityStore(boundedDirectory, safeStorage);
 for (let index = 0; index < MAX_ONE_TIME_TOKENS; index += 1) {
   boundedIdentity.createOneTimeToken({ now: 4000, ttlMs: 5 * 60 * 1000 });
@@ -106,7 +106,7 @@ assert.deepEqual(identity.status(), { instanceId: "pc", port: null, pairedDevice
 assert.equal(JSON.stringify(identity.status()).includes("do-not-expose"), false);
 fs.rmSync(directory, { recursive: true, force: true });
 
-const snapshotDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-lan-snapshot-test-"));
+const snapshotDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-lan-snapshot-test-"));
 let callbackEvent;
 const snapshotStore = new LocalDataStore(snapshotDirectory, event => {
   callbackEvent = event;

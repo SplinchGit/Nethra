@@ -34,7 +34,7 @@ test('the same words in a chat without its own task stay ordinary conversation',
 
 test('a reply claiming a pause that did not happen is corrected against the real status',()=>{
   const running={goal:'Self Improvement',status:'SLEEPING'},paused={goal:'Self Improvement',status:'PAUSED'};
-  assert.match(correctTaskClaims("Understood. I'll pause the objective for now.",running),/Correction from Junction: “Self Improvement” is not paused; it is sleeping/);
+  assert.match(correctTaskClaims("Understood. I'll pause the objective for now.",running),/Correction from Nethra: “Self Improvement” is not paused; it is sleeping/);
   assert.equal(correctTaskClaims('The objective is paused per your request.',paused),'The objective is paused per your request.');
   assert.match(correctTaskClaims("I'll resume work on it now.",paused),/is still paused/);
   assert.equal(correctTaskClaims("I'll pause.",null),"I'll pause.");

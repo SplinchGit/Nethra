@@ -36,8 +36,8 @@ $lanAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContin
     Select-Object -ExpandProperty IPAddress -Unique
 
 Write-Host ""
-Write-Host "Junction calculator server is starting."
-Write-Host "In Junction, open Settings > Build Calculator and try one of these URLs:"
+Write-Host "Nethra calculator server is starting."
+Write-Host "In Nethra, open Settings > Build Calculator and try one of these URLs:"
 foreach ($address in $lanAddresses) {
     Write-Host "  http://${address}:$Port"
 }

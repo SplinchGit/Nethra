@@ -7,7 +7,7 @@ Make model selection explicit and safe on Windows and Android: remove LFM2.5, sh
 ## Constraints
 
 - Preserve the removed Work tab.
-- Preserve the Junction repository's strict main-only publication policy; work is developed in an isolated worktree.
+- Preserve the Nethra repository's strict main-only publication policy; work is developed in an isolated worktree.
 - Do not sync, log, commit, or expose API keys. OpenRouter models always read the OpenRouter credential; first-party models read their own provider credential.
 - Do not add automatic paid fallback or switch providers/models without the owner's selection.
 - Before any main push, require a clean OpenAI or Claude frontier-model review.

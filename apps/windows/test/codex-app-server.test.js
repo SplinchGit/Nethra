@@ -1,3 +1,4 @@
+require('../src/subscription-policy').setBillingGuard(()=>true); // All transport methods in this file are simulated.
 const {test}=require('node:test');const assert=require('node:assert/strict');const {EventEmitter}=require('node:events');const {PassThrough}=require('node:stream');
 const {CodexAppServer}=require('../src/codex-app-server');
 test('reuses initialized process and rejects pending calls when process dies',async()=>{

@@ -1,4 +1,5 @@
 "use strict";
+require("../src/brand-compatibility").inheritEnvironment();
 
 const fs = require("node:fs");
 const os = require("node:os");
@@ -6,16 +7,16 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
 const root = path.resolve(__dirname, "..");
-const outputName = process.env.JUNCTION_PACK_OUTPUT || "workspace-win-unpacked";
-const runtime = process.env.JUNCTION_RUNTIME_DIRECTORY
-  ? path.resolve(process.env.JUNCTION_RUNTIME_DIRECTORY)
+const outputName = process.env.NETHRA_PACK_OUTPUT || "workspace-win-unpacked";
+const runtime = process.env.NETHRA_RUNTIME_DIRECTORY
+  ? path.resolve(process.env.NETHRA_RUNTIME_DIRECTORY)
   : path.join(root, "dist", outputName);
-const target = path.join(runtime, "Junction.exe");
+const target = path.join(runtime, "Nethra.exe");
 const resources = path.join(runtime, "resources", "app.asar");
 const desktop = path.join(os.homedir(), "Desktop");
 const shortcut = path.join(desktop, "Nethra.lnk");
 
-if (process.platform !== "win32") throw new Error("The Junction desktop shortcut is only supported on Windows.");
+if (process.platform !== "win32") throw new Error("The Nethra desktop shortcut is only supported on Windows.");
 if (!fs.existsSync(target) || !fs.existsSync(resources)) {
   throw new Error(`Packaged runtime is incomplete. Run npm run pack:workspace first: ${runtime}`);
 }

@@ -1,6 +1,6 @@
 # Mobile relay and conversation sync verification
 
-Verified 16 September 2026 on the connected Samsung SM-A528B and packaged Windows Junction.
+Verified 16 September 2026 on the connected Samsung SM-A528B and packaged Windows Nethra.
 
 - Sent “Who won the 2026 football World Cup?” inside the phone app using Qwen3.5 4B.
 - PC audit recorded a successful `web_search` returning five sources, followed by PC Ollama inference and a completed answer in 142 seconds. Ollama reported CPU execution (`size_vram: 0`). The phone received and persisted the cited answer.

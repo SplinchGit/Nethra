@@ -1,7 +1,7 @@
 'use strict';
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
 const {NethraStore}=require(path.resolve(__dirname,'../dist/win-unpacked/resources/app.asar/src/nethra-store'));
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'junction-p0-package-'));
+const dir=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-p0-package-'));
 (async()=>{
 let store;
 try{

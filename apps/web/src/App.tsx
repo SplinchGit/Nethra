@@ -817,7 +817,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand">Junction</div>
+        <div className="brand">Nethra</div>
         <nav>
           <button
             className={tab === "feed" ? "active" : ""}
@@ -847,7 +847,7 @@ export default function App() {
       <main className="main">
         <header className="topbar">
           <div className="topbar-row">
-            <h1>{tab === "feed" ? "Calm Feed" : "JunctionGPT"}</h1>
+            <h1>{tab === "feed" ? "Calm Feed" : "NethraGPT"}</h1>
             <span className={`status-pill ${connectionState}`}>{connectionState}</span>
           </div>
           <p>{tab === "feed" ? "Local-first overview" : "Shared conversation"}</p>

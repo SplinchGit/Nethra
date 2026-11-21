@@ -1,6 +1,6 @@
-# Junction build-calculator server
+# Nethra build-calculator server
 
-This small Node.js app supplies live component prices to Junction over the local
+This small Node.js app supplies live component prices to Nethra over the local
 USB-tether or Wi-Fi-hotspot network. The calculator worksheet itself is built
 into the Android app and continues to work when this server is offline.
 
@@ -11,7 +11,7 @@ into the Android app and continues to work when this server is offline.
    enable live eBay pricing. The worksheet does not need these credentials.
 3. Right-click `start.ps1`, choose **Run with PowerShell**, and keep the window open.
 4. The script prints one or more URLs such as `http://192.168.137.23:4001`.
-5. On the phone, open Junction > Settings > Build Calculator, enter the URL, save,
+5. On the phone, open Nethra > Settings > Build Calculator, enter the URL, save,
    then open the **Build** tab and use **Test PC connection**.
 
 The phone can provide the internet connection either way:

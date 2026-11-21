@@ -30,7 +30,7 @@ function mark(question,answer){
   const store=new LocalDataStore(directory);
   const runtime=new LocalAgentRuntime({toolRegistry:{definitions:()=>[],execute:async()=>{throw new Error('Tools are disabled in the memory baseline');},audit(){}}});
   // The same two judges the host wires in main.js: the local 80B model, then Claude on the subscription.
-  const traceModel='junction-qwen3-next-thinking:80b-q4km';
+  const traceModel='nethra-qwen3-next-thinking:80b-q4km';
   const local=async({system,prompt})=>(await runtime.withInference(async()=>{await runtime.prepareModel(traceModel);return runtime.chat(traceModel,[{role:'system',content:system},{role:'user',content:prompt}],[],AbortSignal.timeout(900_000),null,TRACE_SCHEMA,{thinking:true});},undefined,{priority:'background'})).message?.content;
   const frontier=async({system,prompt})=>(await sendClaudeConsult({prompt,systemPrompt:system,subscriptionOnly:true})).content;
   const writes=[],traces=[],ids=new Map();

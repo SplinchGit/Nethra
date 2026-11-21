@@ -2,7 +2,7 @@
 (function expose(root, factory) {
   const api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
-  else root.JunctionModelSelection = api;
+  else root.NethraModelSelection = api;
 })(typeof window === "object" ? window : globalThis, () => {
   function groupedProviderOptions(providers) {
     const labels = ["Local", "First Party", "OpenRouter", "Advanced"];

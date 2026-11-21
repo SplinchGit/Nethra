@@ -1,0 +1,94 @@
+package com.splinch.nethra.data.database.chat
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface ChatDao {
+    @Query("SELECT * FROM chat_sessions LIMIT 1")
+    suspend fun getSession(): ChatSessionEntity?
+
+    @Query("SELECT * FROM chat_sessions WHERE id = :id LIMIT 1")
+    suspend fun getSessionById(id: String): ChatSessionEntity?
+
+    @Query("SELECT * FROM chat_sessions ORDER BY startedAt DESC")
+    fun sessionsStream(): Flow<List<ChatSessionEntity>>
+
+    @Query("SELECT * FROM chat_sessions ORDER BY startedAt DESC")
+    suspend fun getAllSessions(): List<ChatSessionEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertSession(session: ChatSessionEntity)
+
+    @Query("INSERT OR IGNORE INTO chat_sessions (id, startedAt, speechModeEnabled, agentToolsEnabled, title, sharedUpdatedAt) SELECT :id, :createdAt, 0, 1, :title, 0 WHERE NOT EXISTS (SELECT 1 FROM chat_deleted_sessions WHERE id = :id)")
+    suspend fun ensureInvitedSession(id: String, createdAt: Long, title: String?)
+
+    @Query("UPDATE chat_sessions SET title = :title, sharedUpdatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateSessionTitle(id: String, title: String, updatedAt: Long)
+
+    @Query("UPDATE chat_sessions SET sharedUpdatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateSharedTimestamp(id: String, updatedAt: Long)
+
+    @Query("DELETE FROM chat_sessions WHERE id = :id")
+    suspend fun deleteSessionById(id: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun markSessionDeleted(row: ChatDeletedSessionEntity)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM chat_deleted_sessions WHERE id = :id)")
+    suspend fun isSessionDeleted(id: String): Boolean
+
+    @Query("SELECT content FROM chat_messages WHERE sessionId = :sessionId ORDER BY timestamp DESC LIMIT 1")
+    suspend fun lastMessageContent(sessionId: String): String?
+
+    @Query("DELETE FROM chat_messages WHERE sessionId = :sessionId")
+    suspend fun clearMessagesForSession(sessionId: String)
+
+    @Query("SELECT * FROM chat_messages WHERE sessionId = :sessionId ORDER BY timestamp ASC")
+    suspend fun getMessages(sessionId: String): List<ChatMessageEntity>
+
+    @Query("SELECT * FROM chat_messages WHERE sessionId = :sessionId ORDER BY timestamp ASC")
+    fun messageStream(sessionId: String): Flow<List<ChatMessageEntity>>
+
+    @Query("SELECT * FROM chat_messages WHERE id = :id LIMIT 1")
+    suspend fun getMessageById(id: String): ChatMessageEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertMessage(message: ChatMessageEntity)
+
+    @Query("DELETE FROM chat_messages")
+    suspend fun clearMessages()
+
+    /**
+     * Deletes all but the [keepRecent] newest messages in a session, so a long
+     * conversation can be shortened without ending it. Ordering matches
+     * [getMessages]/[messageStream] (timestamp), with id as a tie-break so
+     * messages written inside the same millisecond can't be trimmed
+     * arbitrarily — otherwise a user turn could survive while the assistant
+     * reply it belongs to was deleted.
+     */
+    @Query(
+        """
+        DELETE FROM chat_messages
+        WHERE sessionId = :sessionId AND id NOT IN (
+            SELECT id FROM chat_messages
+            WHERE sessionId = :sessionId
+            ORDER BY timestamp DESC, id DESC
+            LIMIT :keepRecent
+        )
+        """
+    )
+    suspend fun trimMessages(sessionId: String, keepRecent: Int)
+
+    @Query("DELETE FROM chat_sessions")
+    suspend fun clearSession()
+
+    @Query("UPDATE chat_sessions SET speechModeEnabled = :enabled WHERE id = :id")
+    suspend fun updateSpeechMode(id: String, enabled: Boolean)
+
+    @Query("UPDATE chat_sessions SET agentToolsEnabled = :enabled WHERE id = :id")
+    suspend fun updateAgentToolsEnabled(id: String, enabled: Boolean)
+}

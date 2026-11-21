@@ -15,8 +15,8 @@
  const roots=el('input');roots.placeholder='Optional approved read folder on this PC';roots.setAttribute('aria-label','Approved read folder');
  const persistent=el('input');persistent.type='checkbox';persistent.checked=true;const persistenceLabel=el('label',' Continue autonomously across restarts');persistenceLabel.prepend(persistent);
  const select=(label,values,chosen)=>{const wrapper=el('label',label);const field=el('select');for(const [value,title] of values){const option=el('option',title);option.value=value;field.append(option);}field.value=chosen;wrapper.append(field);return {wrapper,field};};
- const taskModels=[['qwen3:30b','Qwen3 30B · thinking'],['junction-qwen3-next-thinking:80b-q4km','Qwen3-Next 80B · Thinking Q4']];
- const newTaskModel=select('Task model ',taskModels,'junction-qwen3-next-thinking:80b-q4km');
+ const taskModels=[['codex:default','GPT · subscription'],['claude:sonnet','Claude Sonnet · subscription'],['claude:opus','Claude Opus · subscription'],['qwen3:30b','Qwen3 30B · thinking'],['nethra-qwen3-next-thinking:80b-q4km','Qwen3-Next 80B · Thinking Q4']];
+ const newTaskModel=select('Task model ',taskModels,'nethra-qwen3-next-thinking:80b-q4km');
  const mode=select('Objective type ',[['FINITE','Finish when achieved'],['ONGOING','Keep monitoring after each result']],'FINITE');
  const autonomy=select('Autonomy ',[['QUIET','Quiet monitoring'],['BALANCED','Balanced initiative'],['ACTIVE','Active exploration']],'BALANCED');
  const priority=select('Priority ',[[1,'1 · Highest'],[2,'2 · High'],[3,'3 · Normal'],[4,'4 · Low'],[5,'5 · Lowest']],'3');
@@ -28,9 +28,9 @@
  const settings=el('article');settings.className='panel';const thinking=el('input');thinking.type='checkbox';thinking.checked=true;thinking.disabled=true;const thinkingLabel=el('label',' Thinking is always on with Qwen3 30B');thinkingLabel.prepend(thinking);
  const startup=el('input');startup.type='checkbox';const startupLabel=el('label',' Start Nethra after Windows sign-in');startupLabel.prepend(startup);const modelStatus=el('p','Checking host…');settings.append(thinkingLabel,startupLabel,modelStatus);document.querySelector('.settings').append(settings);
  // Model warm-up and proactive updates. Loading never generates a reply or touches chats.
- const warmPanel=el('article');warmPanel.className='panel';warmPanel.append(el('h2','Model readiness and updates'),el('p','Junction can load Qwen3 30B before you need it. A load uses about 10 GB of GPU memory and 9 GB of system RAM on this PC and is skipped automatically when free memory is low.'));
+ const warmPanel=el('article');warmPanel.className='panel';warmPanel.append(el('h2','Model readiness and updates'),el('p','Nethra can load Qwen3 30B before you need it. A load uses about 10 GB of GPU memory and 9 GB of system RAM on this PC and is skipped automatically when free memory is low.'));
  const warmGrid=el('div');warmGrid.className='appearance-grid';warmPanel.append(warmGrid);
- const warmStartup=select('Load model at launch ',[['desktop','When I open Junction'],['always','Also at Windows sign-in'],['never','Only when I chat']],'desktop');
+ const warmStartup=select('Load model at launch ',[['desktop','When I open Nethra'],['always','Also at Windows sign-in'],['never','Only when I chat']],'desktop');
  const retention=select('Keep loaded after last use ',[['15m','15 minutes'],['30m','30 minutes'],['1h','1 hour'],['2h','2 hours (default)'],['4h','4 hours'],['8h','8 hours']],'2h');
  const BUDGETS={none:[null,null],'4h':[4*3600000,8*3600000],'2h':[2*3600000,4*3600000],'1h':[3600000,2*3600000],'20m':[1200000,3600000]};
  const taskBudget=select('Task model time per day ',[['none','No limit (chats still come first)'],['4h','4 h per task, 8 h total'],['2h','2 h per task, 4 h total'],['1h','1 h per task, 2 h total'],['20m','20 min per task, 1 h total']],'20m');
@@ -65,7 +65,7 @@
    return show;
  };
  const showCalendar=sourcePanel('calendar','Google Calendar','calendar'),showGmail=sourcePanel('gmail','Gmail','mail');
- const chatThinking=el('div','Thinking on');chatThinking.id='chat-thinking';chatThinking.className='research-toggle fixed-option';chatThinking.title='Qwen3 30B uses thinking on every reply';chatThinking.setAttribute('aria-disabled','true');document.getElementById('research-toggle').after(chatThinking);window.junction.provider().then(renderChatSelection).catch(()=>{});
+ const chatThinking=el('div','Thinking on');chatThinking.id='chat-thinking';chatThinking.className='research-toggle fixed-option';chatThinking.title='Qwen3 30B uses thinking on every reply';chatThinking.setAttribute('aria-disabled','true');document.getElementById('research-toggle').after(chatThinking);window.nethra.provider().then(renderChatSelection).catch(()=>{});
  const openObjectives=el('button','Continue as objective');openObjectives.id='new-objective';openObjectives.type='button';openObjectives.className='research-toggle';document.querySelector('.chat-options-panel').append(openObjectives);
  const objectiveStatus=el('button','Tasks');objectiveStatus.id='objective-status';objectiveStatus.type='button';objectiveStatus.title='View active Nethra tasks and next wakes';objectiveStatus.setAttribute('aria-controls','nethra-task-drawer');objectiveStatus.setAttribute('aria-expanded','false');document.getElementById('new-chat').before(objectiveStatus);
  const taskFilters=el('div');taskFilters.className='task-list-filters';
@@ -75,14 +75,14 @@
  taskFilters.append(taskSearch,taskFilter);area.append(taskFilters);
  const list=el('div');area.append(list);let loading=false,refreshAgain=false,selectedId=null,lastObjectives=[];
  const strip=el('button');strip.id='nethra-chat-strip';strip.type='button';strip.hidden=true;strip.setAttribute('aria-label','Open task details for this chat');document.querySelector('#view-chat .conversation').prepend(strip);
- const api=(type,payload={})=>window.junction.nethra(type,payload);
+ const api=(type,payload={})=>window.nethra.nethra(type,payload);
  const visible=task=>!['COMPLETED','CANCELLED','FAILED'].includes(task.status);
  const needsOwner=kind=>['approval','input','blocked','owner_resume'].includes(kind);
  const updateObjectiveStatus=objectives=>{const active=objectives.filter(visible).length;objectiveStatus.textContent=active?`${active} active`:'Tasks';objectiveStatus.classList.toggle('has-active',active>0);};
  const taskEngine=row=>row.coordinateSelfImprovement?'Codex + Claude coordination':`Task model: ${taskModels.find(([id])=>id===row.model)?.[1]||row.model||'Qwen3 30B'}`;
  const updateStrip=()=>{const linked=lastObjectives.filter(row=>row.conversationId&&row.conversationId===activeConversationId);strip.hidden=!linked.length;if(!linked.length)return;const row=linked[0],wake=` · ${taskEngine(row)}`,needs=needsOwner(row.tracking?.waitingFor?.kind)?' · needs you':'',progress=row.progress?.total?` · Step ${Math.min(row.progress.done+1,row.progress.total)} of ${row.progress.total}${row.step?`: ${row.step}`:''}`:'';strip.textContent=`${linked.length>1?`${linked.length} tasks · `:''}${row.goal} · ${row.live?'Working now':row.status.replaceAll('_',' ')}${needs}${wake}${progress} · ${row.nextWakeAt?`Next wake ${time(row.nextWakeAt)}`:'No wake scheduled'}`;};
  const refreshBadge=async()=>{try{lastObjectives=(await api('nethra.list')).objectives;updateObjectiveStatus(lastObjectives);updateStrip();}catch{objectiveStatus.textContent='Tasks';}};
- window.addEventListener('junction:chat-opened',refreshBadge);
+ window.addEventListener('nethra:chat-opened',refreshBadge);
  strip.onclick=()=>{const row=lastObjectives.find(item=>item.conversationId===activeConversationId);if(row)selectedId=row.id;setDrawerOpen(true);};
  const setDrawerOpen=open=>{if(open)showView('tasks');else if(document.getElementById('view-tasks').classList.contains('active'))showView('chat');section.classList.toggle('open',open);objectiveStatus.setAttribute('aria-expanded',String(open));if(open)refresh();};
  close.onclick=()=>setDrawerOpen(false);
@@ -95,7 +95,7 @@
  const deletedIds=new Set();
  const deleteTask=async id=>{const result=await api('nethra.delete',{id,confirm:true});if(result.deleted){deletedIds.add(id);if(selectedId===id)selectedId=null;}return result;};
  async function refresh(){if(loading){refreshAgain=true;return;}loading=true;try{
-   const result=await api('nethra.list');let next=result.nextOffset;while(next!=null){const page=await api('nethra.list',{offset:next});result.objectives.push(...page.objectives);next=page.nextOffset;}result.objectives=[...new Map(result.objectives.map(row=>[row.id,row])).values()];result.objectives=result.objectives.filter(row=>!deletedIds.has(row.id));thinking.checked=true;startup.checked=result.settings.persistentStartup;showSettings(result.settings);lastObjectives=result.objectives;window.junctionTaskByChat=new Map(result.objectives.filter(row=>row.conversationId).map(row=>[row.conversationId,row.id]));window.junctionTaskChats=new Set(window.junctionTaskByChat.keys());updateObjectiveStatus(result.objectives);updateStrip();
+   const result=await api('nethra.list');let next=result.nextOffset;while(next!=null){const page=await api('nethra.list',{offset:next});result.objectives.push(...page.objectives);next=page.nextOffset;}result.objectives=[...new Map(result.objectives.map(row=>[row.id,row])).values()];result.objectives=result.objectives.filter(row=>!deletedIds.has(row.id));thinking.checked=true;startup.checked=result.settings.persistentStartup;showSettings(result.settings);lastObjectives=result.objectives;window.nethraTaskByChat=new Map(result.objectives.filter(row=>row.conversationId).map(row=>[row.conversationId,row.id]));window.nethraTaskChats=new Set(window.nethraTaskByChat.keys());updateObjectiveStatus(result.objectives);updateStrip();
    const answerDrafts=new Map([...document.querySelectorAll('#view-tasks article[data-objective-id]')].map(card=>[card.dataset.objectiveId,card.querySelector('textarea[aria-label="Answer Nethra"]')?.value||'']));
    const expandedId=detailPane.querySelector('article[data-objective-id]')?.dataset.objectiveId;
    const expandedSections=new Set([...detailPane.querySelectorAll('details[open][data-section]')].map(node=>node.dataset.section));
@@ -227,12 +227,12 @@
        if(task.summary&&!['WAITING_FOR_USER','BLOCKED'].includes(task.status))add("Nethra's note",task.summary);
        if(row.usage)add('Model time today',result.settings.objectiveDailyMs==null?`${Math.round(row.usage.todayMs/60000)} min · no daily limit`:`${Math.round(row.usage.todayMs/60000)} min of ${Math.round(result.settings.objectiveDailyMs/60000)} min daily limit`);
        detailCard.append(dl);}
-     if(progress){const timeline=el('section');timeline.className='task-activity';timeline.append(el('h3','Work log · newest first'));if(progress.activity?.length){const items=el('ol');for(const item of progress.activity){const li=el('li');li.dataset.kind=item.kind;li.append(el('span',item.line),el('small',`${time(item.at)} · ${item.actor||'Junction'}${item.model?` (${item.model})`:''}`));items.append(li);}timeline.append(items);}else timeline.append(el('p','No recorded actions yet.'));diagnostics.append(timeline);}
+     if(progress){const timeline=el('section');timeline.className='task-activity';timeline.append(el('h3','Work log · newest first'));if(progress.activity?.length){const items=el('ol');for(const item of progress.activity){const li=el('li');li.dataset.kind=item.kind;li.append(el('span',item.line),el('small',`${time(item.at)} · ${item.actor||'Nethra'}${item.model?` (${item.model})`:''}`));items.append(li);}timeline.append(items);}else timeline.append(el('p','No recorded actions yet.'));diagnostics.append(timeline);}
      if(performance){const metrics=el('section');metrics.className='task-performance';metrics.append(el('h3','Measured performance · last 7 days'));const seconds=ms=>`${(ms/1000).toFixed(1)} s`;const objective=performance.objective,chat=performance.chat;
        metrics.append(el('p',objective.sampleCount?`${objective.sampleCount} task model call${objective.sampleCount===1?'':'s'} · median inference ${seconds(objective.medianInferenceMs)} · latest ${time(objective.lastSampleAt)}`:'No measured samples for this task in the last 7 days.'));
        metrics.append(el('p',chat.sampleCount?`${chat.sampleCount} local chat repl${chat.sampleCount===1?'ies':'y'} across all conversations · median response ${seconds(chat.medianResponseMs)}${chat.medianTokensPerSecond?` · ${chat.medianTokensPerSecond} tokens/s`:''} · latest ${time(chat.lastSampleAt)}`:'No measured samples for local chat in the last 7 days.'));
        metrics.append(el('small','These are recorded timings, not a before-and-after speedup test.'));diagnostics.append(metrics);}
-     if(experiments?.length){const card=el('section');card.className='task-experiments';card.append(el('h3','Experiments · verdicts computed by Junction'));const items=el('ol');const status={BASELINE:'Baseline recorded; waiting for the change',CHANGED:'Change recorded; collecting samples',CONCLUDED:'Concluded'};
+     if(experiments?.length){const card=el('section');card.className='task-experiments';card.append(el('h3','Experiments · verdicts computed by Nethra'));const items=el('ol');const status={BASELINE:'Baseline recorded; waiting for the change',CHANGED:'Change recorded; collecting samples',CONCLUDED:'Concluded'};
        for(const item of experiments){const li=el('li');li.dataset.verdict=item.result?.verdict||item.status;li.append(el('span',`${item.hypothesis} · ${item.metric.replace(/_/g,' ')}`),el('small',item.result?`${item.result.verdict.replace(/_/g,' ').toLowerCase()} · ${item.result.detail||''}`:`${status[item.status]||item.status} · baseline ${item.baseline.count} samples, median ${item.baseline.median}`));items.append(li);}card.append(items);diagnostics.append(card);}
        // Edit the objective's wording; completed steps and evidence are kept.
        const editor=el('div');editor.className='task-editor';editor.hidden=true;const goalField=el('textarea');goalField.value=task.goal;goalField.setAttribute('aria-label','Edit goal');goalField.rows=3;

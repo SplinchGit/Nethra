@@ -3,7 +3,7 @@
 const { app } = require("electron");
 const fs = require("node:fs"), os = require("node:os"), path = require("node:path");
 const base = path.resolve(__dirname, "../src");
-app.setPath("userData", fs.mkdtempSync(path.join(os.tmpdir(), "junction-latency-")));
+app.setPath("userData", fs.mkdtempSync(path.join(os.tmpdir(), "nethra-latency-")));
 require(path.join(base, "world-host-relay")).WorldHostRelay.prototype.start = function () {};
 require(path.join(base, "lan-relay-lifecycle")).LanRelayLifecycle.prototype.start = async function () { throw new Error("Smoke profile: LAN disabled"); };
 require(path.join(base, "local-brain-relay")).LocalBrainRelay.prototype.start = function () {};
@@ -13,11 +13,11 @@ app.on("browser-window-created", (_event, window) => {
   window.webContents.once("did-finish-load", async () => {
     try {
       const result = await window.webContents.executeJavaScript(`(async () => {
-        await window.junction.setProvider({id:'local',model:'qwen3:30b'});
+        await window.nethra.setProvider({id:'local',model:'qwen3:30b'});
         await newChat();
         let firstTextMs = null, updates = 0, renderedBeforeCompletion = false;
         const started = performance.now();
-        const off = window.junction.onChatStream(value => {
+        const off = window.nethra.onChatStream(value => {
           if (value.provider !== 'local' || !value.text) return;
           firstTextMs ??= Math.round(performance.now() - started);
           updates++;
@@ -26,7 +26,7 @@ app.on("browser-window-created", (_event, window) => {
         document.getElementById('message-input').value = 'In three sentences explain why the sky is blue.';
         await send();
         off();
-        const conversation = await window.junction.conversation(activeConversationId);
+        const conversation = await window.nethra.conversation(activeConversationId);
         return {firstTextMs,updates,renderedBeforeCompletion,wallMs:Math.round(performance.now()-started),answer:conversation.messages.at(-1)?.content};
       })()`);
       result.success = result.updates > 0 && result.renderedBeforeCompletion && /scatter/i.test(result.answer);

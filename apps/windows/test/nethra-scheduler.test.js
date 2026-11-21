@@ -5,7 +5,7 @@ test('a model switch changes the wake input even with unchanged evidence',()=>{
   const task={id:'one',goal:'Revise draft',successCriteria:'Better opening',plan:[],completedSteps:[],pendingSteps:[],evidence:[],ownerInputs:[],model:'qwen3:30b'};
   const store={approvals:()=>[],attention:()=>[]};
   const before=inputFingerprint(task,store);
-  task.model='junction-qwen3-next:80b-q3km';
+  task.model='nethra-qwen3-next:80b-q3km';
   assert.notEqual(inputFingerprint(task,store),before);
 });
 test('a normal Nethra wake can work for twenty minutes',()=>{assert.equal(MAX_RUNTIME,20*60_000);});

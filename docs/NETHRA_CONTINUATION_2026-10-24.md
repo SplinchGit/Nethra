@@ -68,7 +68,7 @@ From the repository root, build Android with `./gradlew.bat :app:testDebugUnitTe
 The APK is `apps/android/build/outputs/apk/debug/app-debug.apk`; install with
 `adb install -r apps/android/build/outputs/apk/debug/app-debug.apk` after connecting the phone.
 
-Windows: in `apps/windows`, set `$env:JUNCTION_PACK_OUTPUT='nethra-agent-chat-20261022'`.
-Follow `AGENTS.md`: disable the per-user Junction Nethra recovery task before rebuilding a live
+Windows: in `apps/windows`, set `$env:NETHRA_PACK_OUTPUT='nethra-agent-chat-20261022'`.
+Follow `AGENTS.md`: disable the per-user Nethra Nethra recovery task before rebuilding a live
 runtime, close that runtime, run `npm run pack:workspace` and `npm run desktop`, launch the desktop
 shortcut, then restore the task. Keep the executable beside its resources. Do not copy it alone.

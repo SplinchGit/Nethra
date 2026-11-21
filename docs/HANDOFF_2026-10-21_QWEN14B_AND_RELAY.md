@@ -2,7 +2,7 @@
 
 Date: 21 October 2026
 Branch: `feat/nethra-durable-agent` (uncommitted working tree, inherited work preserved)
-Scope: the reported "Junction can't talk to qwen 14b" fault on PC and phone, plus the
+Scope: the reported "Nethra can't talk to qwen 14b" fault on PC and phone, plus the
 requested verbose telemetry footer. Written so the next agent can continue without
 re-deriving the diagnosis.
 
@@ -10,9 +10,9 @@ re-deriving the diagnosis.
 
 ## 1. Root causes (evidence, not inference)
 
-### 1.1 PC side — Junction was never the fault
+### 1.1 PC side — Nethra was never the fault
 
-Junction's `LocalAgentRuntime` talks to `qwen3:14b` correctly. A reproduction harness
+Nethra's `LocalAgentRuntime` talks to `qwen3:14b` correctly. A reproduction harness
 (`artifacts/repro-qwen14b-runtime.cjs`) drives the real runtime against the live Ollama
 host and passes 7/7: `/api/ps` reachable, capability probe reports `thinking`,
 non-streaming chat, streaming chat, native `tool_calls`, thinking-mode streaming, and a
@@ -36,11 +36,11 @@ load itself failing, not the 30B. Note `OLLAMA_MODELS` is `C:\Users\jf358`, not 
 default path.
 
 Contributing host state: ~12 GiB RAM shared with ChatGPT/Codex, two Claude desktop
-processes, Steam, a Junction Electron runtime and Video.UI. `qwen3:30b` (18 GB) is also
+processes, Steam, a Nethra Electron runtime and Video.UI. `qwen3:30b` (18 GB) is also
 pulled and cannot fit this 12 GiB RTX 2060 — `test/model-retirement.test.js` already
-asserts Junction never requests it, so it is a manual pull, not a product path.
+asserts Nethra never requests it, so it is a manual pull, not a product path.
 
-**This is environmental and will recur under memory pressure.** Junction now degrades
+**This is environmental and will recur under memory pressure.** Nethra now degrades
 honestly instead of surfacing a raw CUDA string (§2.1).
 
 ### 1.2 Phone side — the hostel AP isolates clients (proven)
@@ -63,14 +63,14 @@ Consequence: **no firewall rule can fix this network.** The LAN transport is unu
 hostel Wi-Fi by design of the AP. An encrypted overlay (Tailscale) is the only route.
 
 Reproduced live on the device — the app shows:
-> "Error: Your paired Junction PC was not reachable on this Wi-Fi network. Open Junction on the PC."
+> "Error: Your paired Nethra PC was not reachable on this Wi-Fi network. Open Nethra on the PC."
 
 ### 1.3 Two further defects found
 
-- **No Windows firewall rule for Junction exists at all**, and the Wi-Fi adapter is on the
+- **No Windows firewall rule for Nethra exists at all**, and the Wi-Fi adapter is on the
   **Public** profile with `DefaultInboundAction: NotConfigured` (= block). Independent of
   AP isolation, this would block the phone on any network. Needs an admin shell (§5).
-- **Junction bound a listener on every private interface**, including the untrusted
+- **Nethra bound a listener on every private interface**, including the untrusted
   hostel LAN. Fixed in §2.3.
 
 ---
@@ -94,7 +94,7 @@ files were discarded.
 
 ### 2.2 Verbose telemetry footer (the requested feature)
 
-Generation speed is computed from Ollama's own `eval_duration`, **not** Junction's wall
+Generation speed is computed from Ollama's own `eval_duration`, **not** Nethra's wall
 clock, so tool execution and queue waiting cannot inflate it. Live proof: the eval-based
 rate held at 30.0–30.8 tok/s across runs (matching the documented 30.46–30.78 baseline)
 while the naive wall-clock rate swung 16.9 → 38.5.
@@ -116,7 +116,7 @@ while the naive wall-clock rate swung 16.9 → 38.5.
 - Android: `chat.complete` now carries a `telemetry` object (metrics only — no reasoning
   text, prompt content or host paths). New `assistant/provider/HostTelemetry.kt` formats
   it identically to Windows; `LlmEvent.TextDone` gained `telemetry`;
-  `LanFirstJunctionPcProvider` populates both it and the previously-unused
+  `LanFirstNethraPcProvider` populates both it and the previously-unused
   `tokensPerSecond`; `ChatManager` persists it; `ChatScreen` renders it, falling back to
   the old short "tokens/s" label for providers without full metrics.
 - Room: `chat_messages.telemetry TEXT`, DB **23 → 24**, `MIGRATION_23_24` registered.
@@ -135,7 +135,7 @@ from `durationMs` — producing a self-contradictory `2.41s total · 30.5s model
 
 ### 2.3 Secure transport on an untrusted network — `src/lan-server.js`, `src/lan-relay-lifecycle.js`
 
-- `PRIVATE_IPV4` previously accepted only RFC1918, so Junction **could not bind the
+- `PRIVATE_IPV4` previously accepted only RFC1918, so Nethra **could not bind the
   Tailscale interface at all**. It now also accepts `100.64.0.0/10` (CGNAT, Tailscale's
   range) via `TAILSCALE_IPV4`.
 - `selectPrivateIPv4()` prefers the overlay address, and is deterministic (sorted) rather
@@ -176,7 +176,7 @@ Live artifacts: `artifacts/repro-qwen14b-runtime.{cjs,json}`,
 
 - Live-verified against real hardware: PC inference, tool calls, thinking mode, telemetry
   numbers, Android build/install/launch, the Room migration, and all four network tests.
-- **Not verified:** any phone↔PC Junction traffic. It is impossible on this Wi-Fi (§1.2)
+- **Not verified:** any phone↔PC Nethra traffic. It is impossible on this Wi-Fi (§1.2)
   and the phone is not yet in the tailnet. The telemetry footer is therefore verified on
   Windows end-to-end, but on Android only by unit test plus a clean install — **its
   on-device rendering has never displayed a real host payload.**
@@ -222,7 +222,7 @@ The PC is already signed in as `jf358950@` with Tailscale IP `100.95.8.42`
 1. Install **Tailscale** from Google Play on the SM_A528B.
 2. Sign in with the **same account** (`jf358950@`).
 3. Confirm the phone appears in `tailscale status` on the PC.
-4. Rebuild/relaunch Junction (§4.2). It will bind `100.95.8.42` **only**.
+4. Rebuild/relaunch Nethra (§4.2). It will bind `100.95.8.42` **only**.
 5. Re-pair the phone from Settings → "Pair Android over LAN". The QR carries the overlay
    address and the certificate pin, and Android's pinning ignores hostname, so it works.
 
@@ -234,7 +234,7 @@ AP client isolation is bypassed entirely.
 Scope it to the **overlay**, not the hostel subnet:
 
 ```powershell
-New-NetFirewallRule -DisplayName "Junction LAN API (Tailscale)" -Direction Inbound `
+New-NetFirewallRule -DisplayName "Nethra LAN API (Tailscale)" -Direction Inbound `
   -Action Allow -Protocol TCP -LocalPort 43111 -RemoteAddress 100.64.0.0/10 -Profile Any
 ```
 
@@ -247,7 +247,7 @@ where isolation is off.
 Check `ollama ps` — expected placement is `100% GPU` at context 4096, ~9.7 GB resident.
 Then check `%LOCALAPPDATA%/Ollama/server.log` for `GPU discovery watchdog timed out` or
 `unable to refresh free memory`. Recovery is to free system RAM (close ChatGPT/Claude
-desktop/Steam) and restart Ollama so it re-reads VRAM. Do **not** extend Junction's
+desktop/Steam) and restart Ollama so it re-reads VRAM. Do **not** extend Nethra's
 deadlines or raise context — neither is the cause.
 
 ### Android builds
@@ -255,7 +255,7 @@ deadlines or raise context — neither is the cause.
 Build with an explicit version code above the CI build, and never install with `-d`:
 
 ```
-./gradlew :app:assembleDebug -PJUNCTION_VERSION_CODE=100149
+./gradlew :app:assembleDebug -PNETHRA_VERSION_CODE=100149
 adb install -r apps/android/build/outputs/apk/debug/app-debug.apk
 ```
 

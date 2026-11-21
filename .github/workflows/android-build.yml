@@ -51,20 +51,20 @@ jobs:
       - name: Write local.properties overrides (from secrets)
         run: |
           echo "Creating local.properties overrides"
-          if [ -n "${{ secrets.JUNCTION_WEB_CLIENT_ID }}" ]; then
-            echo "JUNCTION_WEB_CLIENT_ID=${{ secrets.JUNCTION_WEB_CLIENT_ID }}" >> local.properties
+          if [ -n "${{ (secrets.NETHRA_WEB_CLIENT_ID || secrets.JUNCTION_WEB_CLIENT_ID) }}" ]; then
+            echo "NETHRA_WEB_CLIENT_ID=${{ (secrets.NETHRA_WEB_CLIENT_ID || secrets.JUNCTION_WEB_CLIENT_ID) }}" >> local.properties
           else
-            echo "JUNCTION_WEB_CLIENT_ID=debug-placeholder-web-client-id" >> local.properties
-            echo "Note: JUNCTION_WEB_CLIENT_ID secret not provided; using debug placeholder"
+            echo "NETHRA_WEB_CLIENT_ID=debug-placeholder-web-client-id" >> local.properties
+            echo "Note: NETHRA_WEB_CLIENT_ID secret not provided; using debug placeholder"
           fi
-          if [ -n "${{ secrets.JUNCTION_REALTIME_ENDPOINT }}" ]; then
-            echo "JUNCTION_REALTIME_ENDPOINT=${{ secrets.JUNCTION_REALTIME_ENDPOINT }}" >> local.properties
+          if [ -n "${{ (secrets.NETHRA_REALTIME_ENDPOINT || secrets.JUNCTION_REALTIME_ENDPOINT) }}" ]; then
+            echo "NETHRA_REALTIME_ENDPOINT=${{ (secrets.NETHRA_REALTIME_ENDPOINT || secrets.JUNCTION_REALTIME_ENDPOINT) }}" >> local.properties
           fi
-          if [ -n "${{ secrets.JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT }}" ]; then
-            echo "JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT=${{ secrets.JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT }}" >> local.properties
+          if [ -n "${{ (secrets.NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT || secrets.JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT) }}" ]; then
+            echo "NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT=${{ (secrets.NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT || secrets.JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT) }}" >> local.properties
           fi
-          if [ -n "${{ secrets.JUNCTION_API_BASE_URL }}" ]; then
-            echo "JUNCTION_API_BASE_URL=${{ secrets.JUNCTION_API_BASE_URL }}" >> local.properties
+          if [ -n "${{ (secrets.NETHRA_API_BASE_URL || secrets.JUNCTION_API_BASE_URL) }}" ]; then
+            echo "NETHRA_API_BASE_URL=${{ (secrets.NETHRA_API_BASE_URL || secrets.JUNCTION_API_BASE_URL) }}" >> local.properties
           fi
 
       - name: Resolve debug keystore
@@ -94,8 +94,8 @@ jobs:
           version_code=$((101000 + build_number))
           echo "build_number=$build_number" >> "$GITHUB_OUTPUT"
           echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
-          echo "JUNCTION_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
-          echo "JUNCTION_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
+          echo "NETHRA_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+          echo "NETHRA_VERSION_CODE=$version_code" >> "$GITHUB_ENV"
 
       - name: Build Debug APK (capture logs even on failure)
         run: |
@@ -173,7 +173,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Install and launch Junction on a Pixel 6 emulator
+      - name: Install and launch Nethra on a Pixel 6 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -214,10 +214,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p site
-          cp "${{ steps.find_apk.outputs.APK_PATH }}" site/junction-debug.apk
+          cp "${{ steps.find_apk.outputs.APK_PATH }}" site/nethra-debug.apk
 
-          SHA256=$(sha256sum site/junction-debug.apk | awk '{print $1}')
-          echo "$SHA256  junction-debug.apk" > site/junction-debug.apk.sha256
+          SHA256=$(sha256sum site/nethra-debug.apk | awk '{print $1}')
+          echo "$SHA256  nethra-debug.apk" > site/nethra-debug.apk.sha256
 
           SHORT_SHA=$(git rev-parse --short HEAD)
           FULL_SHA=$(git rev-parse HEAD)
@@ -226,10 +226,10 @@ jobs:
           VERSION_CODE=${{ needs.build.outputs.version_code }}
           BUILD_NUMBER=${{ needs.build.outputs.build_number }}
           REPO="${GITHUB_REPOSITORY}"
-          BASE_URL="https://splinchgit.github.io/Junction"
+          BASE_URL="https://splinchgit.github.io/Nethra"
 
           # The in-app updater reads this. It describes the exact bytes sitting next to
-          # it, so "is there a newer Junction?" is one small GET against the same
+          # it, so "is there a newer Nethra?" is one small GET against the same
           # artifact the README button serves -- never a different build or a different
           # signing key. versionCode is the comparison; versionName is display only.
           cat > site/latest.json <<JSON
@@ -242,8 +242,8 @@ jobs:
             "shortCommit": "${SHORT_SHA}",
             "builtAt": "${BUILD_DATE}",
             "sha256": "${SHA256}",
-            "apkUrl": "${BASE_URL}/junction-debug.apk",
-            "sha256Url": "${BASE_URL}/junction-debug.apk.sha256",
+            "apkUrl": "${BASE_URL}/nethra-debug.apk",
+            "sha256Url": "${BASE_URL}/nethra-debug.apk.sha256",
             "pageUrl": "${BASE_URL}/"
           }
           JSON
@@ -254,7 +254,7 @@ jobs:
           <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>Junction — Download</title>
+          <title>Nethra — Download</title>
           <style>
             :root { color-scheme: dark; }
             body {
@@ -310,9 +310,9 @@ jobs:
           </head>
           <body>
             <div class="card">
-              <h1>Junction</h1>
+              <h1>Nethra</h1>
               <p class="sub">Latest debug build — updates automatically on every push to main</p>
-              <a class="btn" href="junction-debug.apk" download>Download APK</a>
+              <a class="btn" href="nethra-debug.apk" download>Download APK</a>
               <div class="meta">
                 Version: ${VERSION_NAME} (build ${SHORT_SHA})<br>
                 Built: ${BUILD_DATE}<br>
@@ -344,7 +344,7 @@ jobs:
     permissions:
       contents: write
     concurrency:
-      group: junction-apk-release
+      group: nethra-apk-release
       cancel-in-progress: false
     steps:
       - name: Download APK artifact
@@ -376,14 +376,14 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ needs.build.outputs.build_number }}
-          name: Junction APK release ${{ steps.release-number.outputs.number }}
+          name: Nethra APK release ${{ steps.release-number.outputs.number }}
           body: |
             Automated signed APK build from `${{ github.sha }}`. This APK passed build, unit tests, and a Pixel 6 emulator install-and-launch smoke test.
 
             APK release number ${{ steps.release-number.outputs.number }} counts published GitHub releases with APK assets. Android build ${{ needs.build.outputs.build_number }} identifies the installable version.
 
             This release passed the Android build job and unit tests. The APK uses the
-            repository's stable update signing key and can install in place over Junction.
+            repository's stable update signing key and can install in place over Nethra.
           files: |
             app-debug.apk
             app-debug.apk.sha256

@@ -47,27 +47,27 @@ fun loadLocalProps(root: File): Properties {
 
 configure<ApplicationExtension> {
 
-    namespace = "com.splinch.junction"
+    namespace = "com.splinch.nethra"
     compileSdk = 36
 
     val debugKeystore = file("debug.keystore")
     val localProps = loadLocalProps(rootProject.projectDir)
     val releaseStoreFile =
-        findProperty("JUNCTION_RELEASE_STORE_FILE")?.toString()
-            ?: localProps.getProperty("JUNCTION_RELEASE_STORE_FILE")
-            ?: System.getenv("JUNCTION_RELEASE_STORE_FILE")
+        findProperty("NETHRA_RELEASE_STORE_FILE")?.toString()
+            ?: localProps.getProperty("NETHRA_RELEASE_STORE_FILE") ?: localProps.getProperty("JUNCTION_RELEASE_STORE_FILE")
+            ?: System.getenv("NETHRA_RELEASE_STORE_FILE") ?: System.getenv("JUNCTION_RELEASE_STORE_FILE")
     val releaseStorePassword =
-        findProperty("JUNCTION_RELEASE_STORE_PASSWORD")?.toString()
-            ?: localProps.getProperty("JUNCTION_RELEASE_STORE_PASSWORD")
-            ?: System.getenv("JUNCTION_RELEASE_STORE_PASSWORD")
+        findProperty("NETHRA_RELEASE_STORE_PASSWORD")?.toString()
+            ?: localProps.getProperty("NETHRA_RELEASE_STORE_PASSWORD") ?: localProps.getProperty("JUNCTION_RELEASE_STORE_PASSWORD")
+            ?: System.getenv("NETHRA_RELEASE_STORE_PASSWORD") ?: System.getenv("JUNCTION_RELEASE_STORE_PASSWORD")
     val releaseKeyAlias =
-        findProperty("JUNCTION_RELEASE_KEY_ALIAS")?.toString()
-            ?: localProps.getProperty("JUNCTION_RELEASE_KEY_ALIAS")
-            ?: System.getenv("JUNCTION_RELEASE_KEY_ALIAS")
+        findProperty("NETHRA_RELEASE_KEY_ALIAS")?.toString()
+            ?: localProps.getProperty("NETHRA_RELEASE_KEY_ALIAS") ?: localProps.getProperty("JUNCTION_RELEASE_KEY_ALIAS")
+            ?: System.getenv("NETHRA_RELEASE_KEY_ALIAS") ?: System.getenv("JUNCTION_RELEASE_KEY_ALIAS")
     val releaseKeyPassword =
-        findProperty("JUNCTION_RELEASE_KEY_PASSWORD")?.toString()
-            ?: localProps.getProperty("JUNCTION_RELEASE_KEY_PASSWORD")
-            ?: System.getenv("JUNCTION_RELEASE_KEY_PASSWORD")
+        findProperty("NETHRA_RELEASE_KEY_PASSWORD")?.toString()
+            ?: localProps.getProperty("NETHRA_RELEASE_KEY_PASSWORD") ?: localProps.getProperty("JUNCTION_RELEASE_KEY_PASSWORD")
+            ?: System.getenv("NETHRA_RELEASE_KEY_PASSWORD") ?: System.getenv("JUNCTION_RELEASE_KEY_PASSWORD")
 
     signingConfigs {
         getByName("debug") {
@@ -112,16 +112,16 @@ configure<ApplicationExtension> {
         targetSdk = 36
 
         // GitHub workflow run numbers are monotonic until a workflow is recreated, but
-        // older Junction builds used a hand-maintained floor (102). Once the run number
+        // older Nethra builds used a hand-maintained floor (102). Once the run number
         // fell below that floor, every new APK was also version 102 and Android correctly
         // considered it the same build. Put CI run numbers in a dedicated high range so
         // every push is newer than every legacy APK without hand-editing this file again.
         val ciVersionOffset = 100_000
         val suppliedVersionCode =
             (
-                findProperty("JUNCTION_VERSION_CODE")?.toString()
-                    ?: localProps.getProperty("JUNCTION_VERSION_CODE")
-                    ?: System.getenv("JUNCTION_VERSION_CODE")
+                findProperty("NETHRA_VERSION_CODE")?.toString()
+                    ?: localProps.getProperty("NETHRA_VERSION_CODE") ?: localProps.getProperty("JUNCTION_VERSION_CODE")
+                    ?: System.getenv("NETHRA_VERSION_CODE") ?: System.getenv("JUNCTION_VERSION_CODE")
                 )?.toIntOrNull()
         val versionCodeValue = when {
             suppliedVersionCode == null -> ciVersionOffset
@@ -130,9 +130,9 @@ configure<ApplicationExtension> {
         }
         val buildNumberValue =
             (
-                findProperty("JUNCTION_BUILD_NUMBER")?.toString()
-                    ?: localProps.getProperty("JUNCTION_BUILD_NUMBER")
-                    ?: System.getenv("JUNCTION_BUILD_NUMBER")
+                findProperty("NETHRA_BUILD_NUMBER")?.toString()
+                    ?: localProps.getProperty("NETHRA_BUILD_NUMBER") ?: localProps.getProperty("JUNCTION_BUILD_NUMBER")
+                    ?: System.getenv("NETHRA_BUILD_NUMBER") ?: System.getenv("JUNCTION_BUILD_NUMBER")
                 )?.toIntOrNull()
                 ?: suppliedVersionCode
                 ?: 0
@@ -141,62 +141,62 @@ configure<ApplicationExtension> {
 
         buildConfigField(
             "int",
-            "JUNCTION_VERSION_CODE",
+            "NETHRA_VERSION_CODE",
             versionCodeValue.toString()
         )
-        buildConfigField("int", "JUNCTION_BUILD_NUMBER", buildNumberValue.toString())
+        buildConfigField("int", "NETHRA_BUILD_NUMBER", buildNumberValue.toString())
 
         val chatModel =
-            findProperty("JUNCTION_CHAT_MODEL")?.toString()
-                ?: localProps.getProperty("JUNCTION_CHAT_MODEL")
-                ?: System.getenv("JUNCTION_CHAT_MODEL")
+            findProperty("NETHRA_CHAT_MODEL")?.toString()
+                ?: localProps.getProperty("NETHRA_CHAT_MODEL") ?: localProps.getProperty("JUNCTION_CHAT_MODEL")
+                ?: System.getenv("NETHRA_CHAT_MODEL") ?: System.getenv("JUNCTION_CHAT_MODEL")
                 ?: "gpt-4.1-mini"
 
         buildConfigField(
             "String",
-            "JUNCTION_CHAT_MODEL",
+            "NETHRA_CHAT_MODEL",
             "\"$chatModel\""
         )
 
         val webClientId =
-            findProperty("JUNCTION_WEB_CLIENT_ID")?.toString()
-                ?: localProps.getProperty("JUNCTION_WEB_CLIENT_ID")
-                ?: System.getenv("JUNCTION_WEB_CLIENT_ID")
+            findProperty("NETHRA_WEB_CLIENT_ID")?.toString()
+                ?: localProps.getProperty("NETHRA_WEB_CLIENT_ID") ?: localProps.getProperty("JUNCTION_WEB_CLIENT_ID")
+                ?: System.getenv("NETHRA_WEB_CLIENT_ID") ?: System.getenv("JUNCTION_WEB_CLIENT_ID")
                 ?: ""
 
         buildConfigField(
             "String",
-            "JUNCTION_WEB_CLIENT_ID",
+            "NETHRA_WEB_CLIENT_ID",
             "\"$webClientId\""
         )
 
         val realtimeEndpoint =
-            findProperty("JUNCTION_REALTIME_ENDPOINT")?.toString()
-                ?: localProps.getProperty("JUNCTION_REALTIME_ENDPOINT")
-                ?: System.getenv("JUNCTION_REALTIME_ENDPOINT")
+            findProperty("NETHRA_REALTIME_ENDPOINT")?.toString()
+                ?: localProps.getProperty("NETHRA_REALTIME_ENDPOINT") ?: localProps.getProperty("JUNCTION_REALTIME_ENDPOINT")
+                ?: System.getenv("NETHRA_REALTIME_ENDPOINT") ?: System.getenv("JUNCTION_REALTIME_ENDPOINT")
                 ?: ""
 
         buildConfigField(
             "String",
-            "JUNCTION_REALTIME_ENDPOINT",
+            "NETHRA_REALTIME_ENDPOINT",
             "\"$realtimeEndpoint\""
         )
 
         val clientSecretEndpoint =
-            findProperty("JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT")?.toString()
-                ?: localProps.getProperty("JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT")
-                ?: System.getenv("JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT")
+            findProperty("NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT")?.toString()
+                ?: localProps.getProperty("NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT") ?: localProps.getProperty("JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT")
+                ?: System.getenv("NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT") ?: System.getenv("JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT")
                 ?: ""
 
         buildConfigField(
             "String",
-            "JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT",
+            "NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT",
             "\"$clientSecretEndpoint\""
         )
 
         buildConfigField(
             "boolean",
-            "JUNCTION_FIREBASE_CONFIGURED",
+            "NETHRA_FIREBASE_CONFIGURED",
             googleServicesFile.exists().toString()
         )
     }

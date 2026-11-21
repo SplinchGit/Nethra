@@ -4,11 +4,11 @@ const assert=require('node:assert/strict');
 const {environmentContext,workSnapshot,situationContext}=require('../src/assistant-environment');
 
 test('linked objective explains the reviewed code path without claiming chat can code',()=>{
-  const context=situationContext({linked:{goal:'Improve Junction',status:'RUNNING',allowCodeWork:true},capabilities:['start_objective']});
+  const context=situationContext({linked:{goal:'Improve Nethra',status:'RUNNING',allowCodeWork:true},capabilities:['start_objective']});
   assert.match(context,/propose_code_work/);
   assert.match(context,/Codex reviews/);
   assert.match(context,/owner.*start.*review.*apply/i);
-  const disabled=situationContext({linked:{goal:'Improve Junction',status:'RUNNING',allowCodeWork:false}});
+  const disabled=situationContext({linked:{goal:'Improve Nethra',status:'RUNNING',allowCodeWork:false}});
   assert.doesNotMatch(disabled,/propose_code_work/);
 });
 
@@ -17,10 +17,10 @@ test('phone deployment describes actual local tools without inventing phone acce
   assert.match(context,/Android.*paired Windows PC/);
   assert.match(context,/qwen3:14b/);
   assert.match(context,/web_search/);
-  assert.match(context,/not connected to this model/);assert.match(context,/never message bodies/);assert.match(context,/Nothing in Junction can send email/);
+  assert.match(context,/not connected to this model/);assert.match(context,/never message bodies/);assert.match(context,/Nothing in Nethra can send email/);
   assert.match(context,/approval/);
   assert.match(context,/You are one agent/);assert.match(context,/start_objective/);
-  assert.doesNotMatch(context,/Nethra is Junction's persistent primary agent/);
+  assert.doesNotMatch(context,/Nethra is Nethra's persistent primary agent/);
   assert.doesNotMatch(context,/delegate_to_codex/);
 });
 test('deployment rejects arbitrary surface text and bounds project data to this conversation',()=>{

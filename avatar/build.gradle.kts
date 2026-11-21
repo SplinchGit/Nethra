@@ -42,11 +42,11 @@ pluginManager.withPlugin("org.jetbrains.kotlin.android") {
 }
 
 android {
-    namespace = "com.junction.avatar"
+    namespace = "com.nethra.avatar"
     compileSdk = 36
 
     defaultConfig {
-        // Filament supports API 19+, but Junction targets API 26+.
+        // Filament supports API 19+, but Nethra targets API 26+.
         minSdk = 26
     }
 

@@ -12,7 +12,7 @@ const port = parseInt(env.PORT || "8787", 10);
 const config = {
   port,
   openAiApiKey: env.OPENAI_API_KEY || "",
-  chatApiKey: env.JUNCTION_CHAT_API_KEY || "",
+  chatApiKey: env.NETHRA_CHAT_API_KEY || "",
   openAiAllowedModels: toList(env.OPENAI_ALLOWED_MODELS),
   openAiChatModel: env.OPENAI_CHAT_MODEL || "gpt-4.1-mini",
   // gpt-4o-realtime-preview was retired (404 model_not_found).
@@ -20,7 +20,7 @@ const config = {
   openAiRealtimeClientSecretTtl: parseInt(env.OPENAI_REALTIME_CLIENT_SECRET_TTL || "600", 10),
   adminEmail: env.ADMIN_EMAIL || "",
   publicBaseUrl: (env.PUBLIC_BASE_URL || `http://localhost:${port}`).replace(/\/$/, ""),
-  appRedirectUri: env.APP_REDIRECT_URI || "junction://oauth-callback",
+  appRedirectUri: env.APP_REDIRECT_URI || "nethra://oauth-callback",
   disableAuth: env.DISABLE_AUTH === "true",
   firebaseServiceAccountJson: env.FIREBASE_SERVICE_ACCOUNT_JSON || "",
   googleApplicationCredentials: env.GOOGLE_APPLICATION_CREDENTIALS || "",

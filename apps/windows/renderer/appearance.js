@@ -3,7 +3,7 @@
 // runs while the window can be seen and the saved accessibility choice allows it.
 (()=>{
   const root=document.documentElement,main=document.querySelector("main");
-  const {SCENES,getScene,sceneTransform}=window.JunctionScenes;
+  const {SCENES,getScene,sceneTransform}=window.NethraScenes;
   const ambient=document.createElement("div");ambient.id="ambient";ambient.setAttribute("aria-hidden","true");
   const sceneFrame=document.createElement("div");sceneFrame.className="scene-frame";
   const art=document.createElement("div");art.className="art";const wash=document.createElement("div");wash.className="wash";
@@ -11,7 +11,7 @@
   const canvas=document.createElement("canvas");canvas.className="petals";
   sceneFrame.append(art,effects,canvas);ambient.append(sceneFrame,wash);main.prepend(ambient);
   const reducedQuery=window.matchMedia("(prefers-reduced-motion: reduce)");
-  let settings={mode:"system",palette:"junction",artwork:"none",backgroundIntensity:55,petals:true,petalIntensity:35,motion:"system"};
+  let settings={mode:"system",palette:"nethra",artwork:"none",backgroundIntensity:55,petals:true,petalIntensity:35,motion:"system"};
   let scene=getScene("none"),transform=null;
   root.dataset.artwork="none";
 
@@ -126,19 +126,19 @@
   const select=(options)=>{const node=document.createElement("select");for(const [value,text] of options){const option=document.createElement("option");option.value=value;option.textContent=text;node.append(option);}return node;};
   const range=()=>{const node=document.createElement("input");node.type="range";node.min="0";node.max="100";node.step="5";return node;};
   const mode=field("Light / dark",select([["system","Match Windows"],["light","Light"],["dark","Dark"]]));
-  const palette=field("Colour palette",select([["junction","Junction blue (default)"],["sakura","Sakura (muted rose)"],["moss","Moss (soft green)"],["lavender","Lavender"],["peach","Peach"],["mint","Mint"],["sky","Sky"],["butter","Buttercream"]]));
+  const palette=field("Colour palette",select([["nethra","Nethra blue (default)"],["sakura","Sakura (muted rose)"],["moss","Moss (soft green)"],["lavender","Lavender"],["peach","Peach"],["mint","Mint"],["sky","Sky"],["butter","Buttercream"]]));
   const artwork=field("Wallpaper",select(Object.entries(SCENES).map(([id,scene])=>[id,scene.label])));
   const intensity=field("Wallpaper intensity",range());
   const petalToggle=document.createElement("input");petalToggle.type="checkbox";const petalLabel=document.createElement("label");petalLabel.className="inline";petalLabel.append(petalToggle," Scene animation");grid.append(petalLabel);
   const petalAmount=field("Animation intensity",range());
   const motion=field("Motion",select([["system","Follow Windows (reduced motion respected)"],["reduced","Reduced: no animation"],["full","Full"]]));
   function show(){mode.value=settings.mode;palette.value=settings.palette;artwork.value=settings.artwork;intensity.value=String(settings.backgroundIntensity);petalToggle.checked=settings.petals;petalAmount.value=String(settings.petalIntensity);motion.value=settings.motion;const art=settings.artwork!=="none";intensity.disabled=!art;petalToggle.disabled=!art;petalAmount.disabled=!art||!settings.petals;}
-  async function save(patch){try{apply(await window.junction.setAppearance(patch));show();}catch(error){const node=document.getElementById("error");if(node){node.textContent=error.message;node.classList.add("show");}}}
+  async function save(patch){try{apply(await window.nethra.setAppearance(patch));show();}catch(error){const node=document.getElementById("error");if(node){node.textContent=error.message;node.classList.add("show");}}}
   mode.onchange=()=>save({mode:mode.value});palette.onchange=()=>save({palette:palette.value});artwork.onchange=()=>save({artwork:artwork.value});
   intensity.onchange=()=>save({backgroundIntensity:Number(intensity.value)});intensity.oninput=()=>root.style.setProperty("--art-intensity",String(Number(intensity.value)/100));
   petalToggle.onchange=()=>save({petals:petalToggle.checked});petalAmount.onchange=()=>save({petalIntensity:Number(petalAmount.value)});motion.onchange=()=>save({motion:motion.value});
   document.querySelector(".settings")?.prepend(panel);
 
-  window.junction.appearance().then(value=>{apply(value);show();}).catch(()=>show());
-  window.JunctionAppearance={apply,settings:()=>({...settings}),running:()=>Boolean(frame)};
+  window.nethra.appearance().then(value=>{apply(value);show();}).catch(()=>show());
+  window.NethraAppearance={apply,settings:()=>({...settings}),running:()=>Boolean(frame)};
 })();

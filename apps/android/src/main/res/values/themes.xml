@@ -1,5 +1,5 @@
 <resources>
     <!-- Compose renders all real UI/colors; this only strips the native ActionBar,
-         which duplicated the "JunctionGPT" header already drawn inside Compose. -->
-    <style name="Theme.Junction" parent="android:Theme.Material.Light.NoActionBar" />
+         which duplicated the "NethraGPT" header already drawn inside Compose. -->
+    <style name="Theme.Nethra" parent="android:Theme.Material.Light.NoActionBar" />
 </resources>

@@ -1,6 +1,6 @@
-# Junction Avatar module
+# Nethra Avatar module
 
-Animated avatar for Junction's chat screen. Renders a `.glb` (glTF binary)
+Animated avatar for Nethra's chat screen. Renders a `.glb` (glTF binary)
 model via Google Filament, switching between named animation clips for
 state, plus occasional cosmetic emotes.
 
@@ -12,7 +12,7 @@ state, plus occasional cosmetic emotes.
   with a short crossfade between state changes.
 - `EmoteController.kt` — fires a random emote every ~15-45s while idle
   (50% chance per timer tick), or on demand via `fire(state)` from anywhere
-  in Junction's chat logic (e.g. after a successful action).
+  in Nethra's chat logic (e.g. after a successful action).
 - `AvatarStorage.kt` — enforces app-internal-only storage for any
   user-uploaded model; validates the glTF magic bytes and a 25MB size cap
   before accepting a file. Nothing is ever written to shared/external
@@ -42,7 +42,7 @@ state, plus occasional cosmetic emotes.
    implementation(project(":avatar"))
    ```
 3. Drop `AvatarView(state = ...)` into your Chat composable, wired to
-   whatever signal you already have for "is Junction currently speaking /
+   whatever signal you already have for "is Nethra currently speaking /
    listening."
 4. Confirm you're on `minSdk 26+` (Filament requirement) — check
    `app/build.gradle.kts` against this module's `defaultConfig`.

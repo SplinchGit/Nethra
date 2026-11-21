@@ -3,7 +3,7 @@ const os = require("node:os");
 const { CONTEXT_TOKENS } = require("./model-context");
 
 // Idle retention choices map straight to Ollama keep_alive durations. "2h" matches the
-// residency Junction has always used: a cold load of the 19 GB 30B model is ~50 s here.
+// residency Nethra has always used: a cold load of the 19 GB 30B model is ~50 s here.
 const RETENTION = Object.freeze({ "15m": "15m", "30m": "30m", "1h": "1h", "2h": "2h", "4h": "4h", "8h": "8h" });
 const DEFAULT_RETENTION = "2h";
 const STARTUP = Object.freeze(["desktop", "always", "never"]);
@@ -19,7 +19,7 @@ function retentionValue(value) { return Object.hasOwn(RETENTION, value) ? RETENT
 /**
  * Loads the chat model before the owner's message arrives, without generating anything.
  * Warm-up never takes the inference slot: Ollama serialises a chat behind an in-progress
- * load of the same model and options, so holding Junction's lock would only delay
+ * load of the same model and options, so holding Nethra's lock would only delay
  * interactive work. Concurrent requests share one load; a resident copy is never reloaded.
  */
 class ModelWarmer {

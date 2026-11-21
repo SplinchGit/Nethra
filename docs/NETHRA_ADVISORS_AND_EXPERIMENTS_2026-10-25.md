@@ -9,7 +9,7 @@ The task toggle is now **Self-improvement**. It is still off by default, can onl
 - `consult_codex` (GPT-5.6 Luna, read-only, user config ignored). This is unchanged except for the gate.
 - `consult_claude` (Claude Code CLI, `sonnet` alias, currently `claude-sonnet-5-5`) is new. Each turn has no built-in tools (`--tools ""`), no MCP servers (`--strict-mcp-config`), no user, project or local settings or hooks (`--setting-sources ""`) and no saved session (`--no-session-persistence`). It uses a short advisor system prompt. The prompt is sent over stdin to the real `claude.exe`, with no shell. Only the objective, success criteria and Nethra's question are sent. Read roots, evidence and owner messages are not.
 
-There is no fixed daily count any more. Before each consultation, Junction checks that advisor's live plan windows:
+There is no fixed daily count any more. Before each consultation, Nethra checks that advisor's live plan windows:
 
 - **Codex:** `codex app-server` → `account/rateLimits/read`. This is a live query against the signed-in ChatGPT account. It does not spend usage and is cached for 60 seconds.
 - **Claude:** the `rate_limit_event` that Claude Code emits on every turn (five-hour and seven-day utilization), saved after each consultation. Before the first reply there is no reading, so one attempt is allowed. A rejected turn is recorded too.
@@ -22,9 +22,9 @@ Measured at delivery, live on this PC:
 
 ### Terms
 
-Checked against [Claude Code legal and compliance](https://code.claude.com/docs/en/legal-and-compliance) on 25 October 2026. Junction runs the owner's own, **unmodified** Claude Code binary, signed in through Anthropic's own flow. It never reads, stores or forwards the OAuth token. The usage is billed to the owner's own subscription and is not offered to anyone else. The page explicitly permits an end user signing in to the unmodified binary with their own subscription. It forbids third-party apps offering Claude.ai login, or routing other users' requests through subscription credentials; Junction does neither. It also notes that advertised Pro/Max limits "assume ordinary, individual usage", so Anthropic's limits, not Junction's, are the outer bound. If Junction were ever distributed to other people, each person would need their own sign-in; nothing here shares one. The equivalent OpenAI position is in the Codex bridge note.
+Checked against [Claude Code legal and compliance](https://code.claude.com/docs/en/legal-and-compliance) on 25 October 2026. Nethra runs the owner's own, **unmodified** Claude Code binary, signed in through Anthropic's own flow. It never reads, stores or forwards the OAuth token. The usage is billed to the owner's own subscription and is not offered to anyone else. The page explicitly permits an end user signing in to the unmodified binary with their own subscription. It forbids third-party apps offering Claude.ai login, or routing other users' requests through subscription credentials; Nethra does neither. It also notes that advertised Pro/Max limits "assume ordinary, individual usage", so Anthropic's limits, not Nethra's, are the outer bound. If Nethra were ever distributed to other people, each person would need their own sign-in; nothing here shares one. The equivalent OpenAI position is in the Codex bridge note.
 
-## Experiments: before/after verdicts computed by Junction
+## Experiments: before/after verdicts computed by Nethra
 
 `experiment` has three actions:
 
@@ -35,13 +35,13 @@ Checked against [Claude Code legal and compliance](https://code.claude.com/docs/
 
    Chat baselines are pinned to their most common model, and after-samples from other models are ignored.
 2. `mark_change` records when the change was applied, by Nethra. If `workId` names a Work Activity draft, the host instead uses the time Work Activity promoted the verified change into the checkout.
-3. `evaluate` uses only samples after the change point. For `code` changes, the change point is the first Junction start after the change, which `host_starts` records at launch. Before that the verdict is `WAITING_FOR_RESTART`.
+3. `evaluate` uses only samples after the change point. For `code` changes, the change point is the first Nethra start after the change, which `host_starts` records at launch. Before that the verdict is `WAITING_FOR_RESTART`.
 
 Verdicts:
 - `IMPROVED` or `REGRESSED` require at least 5 after-samples, a two-sided Mann-Whitney U test with p < 0.05, and at least a 5% change in the median.
 - Otherwise the verdict is `NO_CLEAR_CHANGE`, `INSUFFICIENT_DATA`, `WAITING_FOR_CHANGE` or `WAITING_FOR_RESTART`.
 
-A definitive verdict concludes the experiment, and later samples cannot rewrite it. Raw values stay in the host database; tools and screens see counts, medians, p and the relative change. Concluded verdicts appear in the task's activity, attributed to Junction, on Windows and Android. Windows also shows an Experiments card on the task page.
+A definitive verdict concludes the experiment, and later samples cannot rewrite it. Raw values stay in the host database; tools and screens see counts, medians, p and the relative change. Concluded verdicts appear in the task's activity, attributed to Nethra, on Windows and Android. Windows also shows an Experiments card on the task page.
 
 Caveat: these are real workloads, not a controlled benchmark. A shift in what was asked can move medians, and the verdict text says so.
 
@@ -72,7 +72,7 @@ Hidden tools still refuse at execution.
   - Continuous ongoing tasks never posted progress.
   - Nethra slept for Codex while Claude was free.
   - The runner wiped a wake's conversation after 6,000 characters, so Nethra repeated identical reads until its tool budget ran out.
-  - Advisors got no Junction context and overlong replies were stored truncated.
+  - Advisors got no Nethra context and overlong replies were stored truncated.
 - Owner-facing progress posts still respect quiet hours (22:00–07:00 by default).
 
 ## Not done

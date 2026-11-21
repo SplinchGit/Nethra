@@ -62,15 +62,15 @@ Paths in this table are relative to the repository root.
 | Windows chat UI and IPC boundary | [`renderer/parity.js`](../apps/windows/renderer/parity.js), [`src/preload.js`](../apps/windows/src/preload.js) | Streaming chat and context-isolated bridge |
 | Startup and background host | [`nethra-startup.js`](../apps/windows/src/nethra-startup.js), [`nethra-startup.ps1`](../apps/windows/src/nethra-startup.ps1) | Per-user scheduled task and `--agent-host` |
 
-Android sources are under `apps/android/src/main/java/com/splinch/junction/`:
+Android sources are under `apps/android/src/main/java/com/splinch/nethra/`:
 
-- [`data/sync/lan/NethraClient.kt`](../apps/android/src/main/java/com/splinch/junction/data/sync/lan/NethraClient.kt): task RPC, paired LAN first, encrypted relay fallback, durable mutation request IDs.
-- [`data/sync/lan/LanTransport.kt`](../apps/android/src/main/java/com/splinch/junction/data/sync/lan/LanTransport.kt): pinned peer identity, challenge authentication and correlated requests.
-- [`feature/projects/NethraPanel.kt`](../apps/android/src/main/java/com/splinch/junction/feature/projects/NethraPanel.kt): Tasks UI and controls.
-- [`feature/projects/ObjectiveStatusMonitor.kt`](../apps/android/src/main/java/com/splinch/junction/feature/projects/ObjectiveStatusMonitor.kt): cached/stale task status.
-- [`feature/chat/ui/ChatScreen.kt`](../apps/android/src/main/java/com/splinch/junction/feature/chat/ui/ChatScreen.kt): task-linked chat presentation.
-- [`assistant/provider/LanFirstJunctionPcProvider.kt`](../apps/android/src/main/java/com/splinch/junction/assistant/provider/LanFirstJunctionPcProvider.kt): normal local chat sent to the paired Windows runtime.
-- [`assistant/runtime/ChatManager.kt`](../apps/android/src/main/java/com/splinch/junction/assistant/runtime/ChatManager.kt): ordinary provider/context/conversation facade; also contains the separate Android plan integration.
+- [`data/sync/lan/NethraClient.kt`](../apps/android/src/main/java/com/splinch/nethra/data/sync/lan/NethraClient.kt): task RPC, paired LAN first, encrypted relay fallback, durable mutation request IDs.
+- [`data/sync/lan/LanTransport.kt`](../apps/android/src/main/java/com/splinch/nethra/data/sync/lan/LanTransport.kt): pinned peer identity, challenge authentication and correlated requests.
+- [`feature/projects/NethraPanel.kt`](../apps/android/src/main/java/com/splinch/nethra/feature/projects/NethraPanel.kt): Tasks UI and controls.
+- [`feature/projects/ObjectiveStatusMonitor.kt`](../apps/android/src/main/java/com/splinch/nethra/feature/projects/ObjectiveStatusMonitor.kt): cached/stale task status.
+- [`feature/chat/ui/ChatScreen.kt`](../apps/android/src/main/java/com/splinch/nethra/feature/chat/ui/ChatScreen.kt): task-linked chat presentation.
+- [`assistant/provider/LanFirstNethraPcProvider.kt`](../apps/android/src/main/java/com/splinch/nethra/assistant/provider/LanFirstNethraPcProvider.kt): normal local chat sent to the paired Windows runtime.
+- [`assistant/runtime/ChatManager.kt`](../apps/android/src/main/java/com/splinch/nethra/assistant/runtime/ChatManager.kt): ordinary provider/context/conversation facade; also contains the separate Android plan integration.
 
 For the released Android chat/UI behavior, inspect those files at commit `0537eb1a151e8a8c93ff527536c611fb06ae56a4`. Build 203 removes the extra recorded-actions polling/card from chat and hides old per-cycle progress messages, while retaining saved messages and task records. Those cleanup changes are not all reflected in the current uncommitted Android UI files.
 
@@ -143,7 +143,7 @@ The task catalogue currently provides no arbitrary shell, browser/desktop-contro
 Supported task models are currently exactly:
 
 - `qwen3:30b`: default, native thinking enabled, task reasoning budget 1,100 tokens.
-- `junction-qwen3-next:80b-q3km`: Qwen3-Next 80B A3B Instruct Q3_K_M, thinking disabled. The local alias uses a corrected chat template. Actual installed parameter count was verified as 79,674,391,296.
+- `nethra-qwen3-next:80b-q3km`: Qwen3-Next 80B A3B Instruct Q3_K_M, thinking disabled. The local alias uses a corrected chat template. Actual installed parameter count was verified as 79,674,391,296.
 
 Both share the same store, contract, tools, checkpoint and completion pipeline. Task-model changes fence the old execution and preserve saved work. Chat-provider/model choice and a task's saved model are separate settings. New models need an explicit supported profile/runtime integration; the present implementation is not an unrestricted model plug-in loader.
 
@@ -188,7 +188,7 @@ Ollama's default endpoint is loopback `127.0.0.1:11434`. The currently running W
 
 ## 7. Self-improvement and coding
 
-With owner-enabled code work and an approved Junction repository root, a task may inspect host facts/performance/recent commits, ask Codex or Claude for advice, propose changes and track measurable experiments.
+With owner-enabled code work and an approved Nethra repository root, a task may inspect host facts/performance/recent commits, ask Codex or Claude for advice, propose changes and track measurable experiments.
 
 Advisors use locally signed-in CLIs and a saved usage reserve (currently 10%). Codex is invoked with a read-only sandbox and isolated configuration; its instructions forbid commands/files/network for this advice path, but the adapter does not explicitly disable every Codex tool. Claude's advice adapter disables tools/settings/MCP and session persistence. Advice cannot count as an applied code change or measured speedup.
 
@@ -198,7 +198,7 @@ Experiments compare task inference time, chat response time or chat tokens/sec. 
 
 ## 8. Where the data lives and what continues
 
-On this PC, the app-data root is `C:/Users/jf358/AppData/Roaming/junction-windows/`:
+On this PC, the app-data root is `C:/Users/jf358/AppData/Roaming/nethra-windows/`:
 
 | Path beneath app data | Contents |
 |---|---|
@@ -206,7 +206,7 @@ On this PC, the app-data root is `C:/Users/jf358/AppData/Roaming/junction-window
 | `nethra/workspaces/<task-id>/` | Per-task drafts, revisions and measured model-run files. |
 | `nethra/device-commands.sqlite` | Signed device-command queue/results. |
 | `nethra/model-profile.json` | Recorded local model/runtime profile. |
-| `local/junction-local.json` | Conversations, owner memory facts, usage and synchronization metadata. Separate from the objective database. |
+| `local/nethra-local.json` | Conversations, owner memory facts, usage and synchronization metadata. Separate from the objective database. |
 | `research/research-jobs.json` | Bounded research jobs and passage evidence. |
 | `foreman/` | Separate coding project/executor state. |
 | `sources/` and `identity/` | Source authorization and pairing/account state; sensitive credentials use the host vault/safeStorage path. |
@@ -215,7 +215,7 @@ On this PC, the app-data root is `C:/Users/jf358/AppData/Roaming/junction-window
 
 The default store caps are 500 total objectives and 100 nonterminal/nonpaused active objectives. Owner memory is a separate bounded fact list, not an automatically indexed document library.
 
-The packaged runtime is `apps/windows/dist/nethra-qwen3-next-q3km-20261106/`, launched through `Nethra.lnk`/`Junction.lnk`. It is a complete Electron directory, not a portable exe by itself. A per-user Windows scheduled task starts `--agent-host` after sign-in and retries/restarts the host on a one-minute schedule. This is an interactive-user task, not a system service that runs before sign-in.
+The packaged runtime is `apps/windows/dist/nethra-qwen3-next-q3km-20261106/`, launched through `Nethra.lnk`/`Nethra.lnk`. It is a complete Electron directory, not a portable exe by itself. A per-user Windows scheduled task starts `--agent-host` after sign-in and retries/restarts the host on a one-minute schedule. This is an interactive-user task, not a system service that runs before sign-in.
 
 Closing the Android UI does not end Windows objectives. Closing the Windows window retains the host while persistent unfinished objectives exist. Explicit Quit shuts down services orderly. PC power/sleep, Ollama availability, connection/source failures, owner gates and inference limits still affect progress. A host restart reconstructs saved work; it does not preserve an in-flight model's private reasoning.
 
@@ -226,7 +226,7 @@ Closing the Android UI does not end Windows objectives. Closing the Windows wind
 - Latest delivered verification: full Windows suite passed, including 452 tests in its final group; Android 223 unit tests and debug build passed; Android build 203 passed emulator install/launch and signed updater publication. See [`artifacts/nethra-wallpapers-acceptance.md`](../artifacts/nethra-wallpapers-acceptance.md).
 - This audit freshly matched all 97 installed Windows source/renderer files against the working implementation and read task settings through a read-only database connection.
 
-At the audit snapshot there were ten stored objectives: six completed, three cancelled and one active. The active task was **Self Improvement**, ongoing, persistent, continuous, Active autonomy, using 80B, code proposals enabled and the Junction repository approved as a read root. No Gmail/Calendar source was selected for that task. Persistent startup was enabled, warm-on-startup was Desktop, retention two hours, proactive updates All, quiet hours disabled and both daily inference budgets unlimited. These are observations, not settings changed by the audit.
+At the audit snapshot there were ten stored objectives: six completed, three cancelled and one active. The active task was **Self Improvement**, ongoing, persistent, continuous, Active autonomy, using 80B, code proposals enabled and the Nethra repository approved as a read root. No Gmail/Calendar source was selected for that task. Persistent startup was enabled, warm-on-startup was Desktop, retention two hours, proactive updates All, quiet hours disabled and both daily inference budgets unlimited. These are observations, not settings changed by the audit.
 
 ## 10. Practical limitations
 

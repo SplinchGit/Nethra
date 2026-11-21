@@ -27,10 +27,10 @@ Windows production:
 
 Android production:
 - apps/android/build.gradle.kts
-- apps/android/src/main/java/com/splinch/junction/feature/projects/NethraPanel.kt
-- apps/android/src/main/java/com/splinch/junction/feature/projects/ObjectiveStatusMonitor.kt
-- apps/android/src/main/java/com/splinch/junction/feature/projects/ObjectiveRefreshGate.kt (new: rejects stale asynchronous responses)
-- apps/android/src/main/java/com/splinch/junction/feature/projects/TaskDetailHeader.kt (new: shared, independently testable fixed controls)
+- apps/android/src/main/java/com/splinch/nethra/feature/projects/NethraPanel.kt
+- apps/android/src/main/java/com/splinch/nethra/feature/projects/ObjectiveStatusMonitor.kt
+- apps/android/src/main/java/com/splinch/nethra/feature/projects/ObjectiveRefreshGate.kt (new: rejects stale asynchronous responses)
+- apps/android/src/main/java/com/splinch/nethra/feature/projects/TaskDetailHeader.kt (new: shared, independently testable fixed controls)
 
 Tests and verification:
 - apps/windows/test/nethra-deletion.test.js (new)
@@ -40,8 +40,8 @@ Tests and verification:
 - apps/windows/test/nethra-api.test.js
 - apps/windows/scripts/nethra-delete-ui-smoke.js (new)
 - apps/windows/scripts/nethra-package-smoke.cjs (new)
-- apps/android/src/test/java/com/splinch/junction/feature/projects/ObjectiveRefreshGateTest.kt (new)
-- apps/android/src/androidTest/java/com/splinch/junction/feature/projects/NethraPanelTest.kt (new)
+- apps/android/src/test/java/com/splinch/nethra/feature/projects/ObjectiveRefreshGateTest.kt (new)
+- apps/android/src/androidTest/java/com/splinch/nethra/feature/projects/NethraPanelTest.kt (new)
 
 Documentation: docs/ARCHITECTURE.md, apps/windows/README.md, this report, and docs/superpowers/plans/2026-11-09-nethra-p0-implementation.md.
 
@@ -51,7 +51,7 @@ Existing uncommitted work was preserved; the list above describes this task's ch
 
 - Windows full regression: `npm test`; final results in apps/windows/test-results/nethra-p0-final-tests.log.
 - Real Electron renderer/preload/IPC/SQLite smoke: apps/windows/test-results/nethra-p0-ui-final.log and p0-delete-visible.png. It verifies visible Delete above progress, confirmation, retained conversation and deletion surviving database reopen, using an isolated profile with network/inference disabled.
-- Windows directory package: apps/windows/dist/win-unpacked. Keep Junction.exe with its resources and pc-companion directory. This candidate is not installed over the active runtime.
+- Windows directory package: apps/windows/dist/win-unpacked. Keep Nethra.exe with its resources and pc-companion directory. This candidate is not installed over the active runtime.
 - Packaged SQLite smoke: apps/windows/test-results/nethra-p0-package-smoke.log.
 - Android unit tests and both app/instrumentation APKs: artifacts/nethra-p0-android-delivery-build.log. App: apps/android/build/outputs/apk/debug/app-debug.apk.
 - Candidate version code 101204/build 204 is above the published 101203/build 203 observed during delivery verification. Existing Gradle default local version 100000 would not update that published installation; the candidate is built with explicit version properties.

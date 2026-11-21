@@ -1,8 +1,8 @@
 {
-  "name": "junction-windows",
+  "name": "nethra-windows",
   "private": true,
   "version": "0.1.0",
-  "description": "Native Windows companion for Junction",
+  "description": "Native Windows companion for Nethra",
   "main": "src/main.js",
   "type": "commonjs",
   "engines": {
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "electron .",
-    "test": "node test/run.js && node test/lan-protocol.test.js && node test/lan-server.test.js && node test/local-agent-runtime.test.js && node test/mobile-relay.test.js && node test/lan-reliability.test.js && node test/model-retirement.test.js && node test/model-selection.test.js && node test/nvidia-provider.test.js && node test/message-format.test.js && node test/assistant-orchestration.test.js && node test/openrouter-provider.test.js && node test/world-bridge.test.js && node --test test/world-host-relay.test.js && node --test test/foreman*.test.js test/owner-work.test.js test/codex-app-server.test.js && node --test test/assistant-environment.test.js test/local-tool-contract.test.js test/local-agent-stream.test.js test/owner-work-handler.test.js test/model-telemetry.test.js test/lan-bind-overlay.test.js test/nethra*.test.js test/device-commands.test.js test/calendar-source.test.js test/gmail-source.test.js test/model-residency.test.js test/inference-coordinator.test.js test/world-inference-payload.test.js test/relay-write-budget.test.js test/agent-mode.test.js test/model-warmer.test.js test/inference-priority.test.js test/awareness-and-control.test.js test/appearance-scenes.test.js test/self-capabilities.test.js",
+    "test": "node --test test/brand-compatibility.test.js test/subscription-runtime.test.js test/electrum-wallet.test.js && node test/run.js && node test/lan-protocol.test.js && node test/lan-server.test.js && node test/local-agent-runtime.test.js && node test/mobile-relay.test.js && node test/lan-reliability.test.js && node test/model-retirement.test.js && node test/model-selection.test.js && node test/nvidia-provider.test.js && node test/message-format.test.js && node test/assistant-orchestration.test.js && node test/openrouter-provider.test.js && node test/world-bridge.test.js && node --test test/world-host-relay.test.js && node --test test/foreman*.test.js test/owner-work.test.js test/codex-app-server.test.js && node --test test/assistant-environment.test.js test/local-tool-contract.test.js test/local-agent-stream.test.js test/owner-work-handler.test.js test/model-telemetry.test.js test/lan-bind-overlay.test.js test/nethra*.test.js test/device-commands.test.js test/calendar-source.test.js test/gmail-source.test.js test/model-residency.test.js test/inference-coordinator.test.js test/world-inference-payload.test.js test/relay-write-budget.test.js test/agent-mode.test.js test/model-warmer.test.js test/inference-priority.test.js test/awareness-and-control.test.js test/appearance-scenes.test.js test/self-capabilities.test.js",
     "pack": "electron-builder --dir --win",
     "pack:workspace": "node scripts/pack-workspace.js",
     "desktop": "node scripts/create-desktop-shortcut.js",
@@ -33,7 +33,7 @@
   },
   "build": {
     "appId": "com.splinch.junction.windows",
-    "productName": "Junction",
+    "productName": "Nethra",
     "asar": true,
     "asarUnpack": ["src/foreman-pdf-worker.cjs", "node_modules/pdfjs-dist/**/*", "node_modules/@napi-rs/**/*"],
     "npmRebuild": false,
@@ -54,7 +54,7 @@
       }
     ],
     "win": {
-      "icon": "assets/junction.ico",
+      "icon": "assets/nethra.ico",
       "target": [
         "nsis"
       ]

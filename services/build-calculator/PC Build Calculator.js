@@ -118,9 +118,9 @@ const server = http.createServer(async (request, response) => {
     const client = request.socket.remoteAddress || "unknown device";
     if (!seenClients.has(client)) {
       seenClients.add(client);
-      console.log(`[CONNECTED] Junction reached this PC from ${client}`);
+      console.log(`[CONNECTED] Nethra reached this PC from ${client}`);
     } else if (request.url !== "/health") {
-      console.log(`[JUNCTION] ${request.method} ${request.url}`);
+      console.log(`[NETHRA] ${request.method} ${request.url}`);
     }
     if (request.method === "OPTIONS") return reply(response, 204, {});
     if (request.method === "GET" && request.url === "/health") {
@@ -151,7 +151,7 @@ async function configure() {
   console.log("1. Visit https://developer.ebay.com/my/keys and sign in.");
   console.log("2. Create an application if needed, then open its Production keyset.");
   console.log("3. Copy the App ID (Client ID) and Cert ID (Client Secret) below.");
-  console.log("   Your secret is saved only in this Desktop folder and is never sent to Junction.\n");
+  console.log("   Your secret is saved only in this Desktop folder and is never sent to Nethra.\n");
   while (true) {
     const appId = (await prompt.question("Paste eBay App ID / Client ID (blank to skip): ")).trim();
     if (!appId) {
@@ -208,7 +208,7 @@ async function main() {
   server.listen(PORT, "0.0.0.0", () => {
     console.log(`\nPC Build Calculator is running on port ${PORT}.`);
     const addresses = Object.values(os.networkInterfaces()).flat().filter(x => x && x.family === "IPv4" && !x.internal);
-    console.log("In Junction > Settings > Build Calculator, use one of these addresses:");
+    console.log("In Nethra > Settings > Build Calculator, use one of these addresses:");
     for (const address of addresses) console.log(`  http://${address.address}:${PORT}`);
     console.log("Keep this window open. Press Ctrl+C or close the window to stop it completely.");
   });

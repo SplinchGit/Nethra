@@ -35,8 +35,8 @@ jobs:
       - name: Write local.properties from secrets
         run: |
           : > local.properties
-          for VAR in JUNCTION_WEB_CLIENT_ID JUNCTION_REALTIME_ENDPOINT \
-                     JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT JUNCTION_API_BASE_URL; do
+          for VAR in NETHRA_WEB_CLIENT_ID NETHRA_REALTIME_ENDPOINT \
+                     NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT NETHRA_API_BASE_URL; do
             VALUE="${!VAR}"
             if [ -n "$VALUE" ]; then
               echo "$VAR=$VALUE" >> local.properties
@@ -45,10 +45,10 @@ jobs:
             fi
           done
         env:
-          JUNCTION_WEB_CLIENT_ID: ${{ secrets.JUNCTION_WEB_CLIENT_ID }}
-          JUNCTION_REALTIME_ENDPOINT: ${{ secrets.JUNCTION_REALTIME_ENDPOINT }}
-          JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT: ${{ secrets.JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT }}
-          JUNCTION_API_BASE_URL: ${{ secrets.JUNCTION_API_BASE_URL }}
+          NETHRA_WEB_CLIENT_ID: ${{ (secrets.NETHRA_WEB_CLIENT_ID || secrets.JUNCTION_WEB_CLIENT_ID) }}
+          NETHRA_REALTIME_ENDPOINT: ${{ (secrets.NETHRA_REALTIME_ENDPOINT || secrets.JUNCTION_REALTIME_ENDPOINT) }}
+          NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT: ${{ (secrets.NETHRA_REALTIME_CLIENT_SECRET_ENDPOINT || secrets.JUNCTION_REALTIME_CLIENT_SECRET_ENDPOINT) }}
+          NETHRA_API_BASE_URL: ${{ (secrets.NETHRA_API_BASE_URL || secrets.JUNCTION_API_BASE_URL) }}
 
       # The ubuntu-latest image ships an Android SDK at $ANDROID_HOME; install only the
       # pieces this project actually needs, matched to compileSdk/targetSdk in apps/android/build.gradle.kts.

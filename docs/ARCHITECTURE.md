@@ -1,6 +1,6 @@
-# Junction Architecture
+# Nethra Architecture
 
-Junction is a single Android application. Its runtime accepts owner input through
+Nethra is a single Android application. Its runtime accepts owner input through
 the UI and voice surfaces, builds assistant context, asks an LLM provider for a
 response, then routes any requested action through planning, trust checks, owner
 approval, execution, verification, and audit logging.

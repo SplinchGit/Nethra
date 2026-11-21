@@ -69,7 +69,7 @@ test('with nothing in the journal the digest says so, and long digests drop whol
 test('the owner last spoke at their newest message, ignoring the turn being answered and non-owner messages',()=>{
   const now=1_000_000_000;
   const localData={state:{conversations:[
-    {messages:[{role:'user',provenance:'OWNER',createdAt:now-5*HOUR},{role:'assistant',provenance:'JUNCTION',createdAt:now-4*HOUR}]},
+    {messages:[{role:'user',provenance:'OWNER',createdAt:now-5*HOUR},{role:'assistant',provenance:'NETHRA',createdAt:now-4*HOUR}]},
     {messages:[{role:'user',provenance:'OWNER',createdAt:now-2*HOUR},{role:'user',provenance:'UNTRUSTED',createdAt:now-HOUR},{role:'user',provenance:'OWNER',createdAt:now-1000}]}]}};
   assert.equal(ownerLastSpokeAt(localData,{now}),now-1000);
   assert.equal(ownerLastSpokeAt(localData,{now,excludeWithinMs:120_000}),now-2*HOUR);

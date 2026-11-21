@@ -3,7 +3,7 @@
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
 const {execFileSync}=require('node:child_process');const {Foreman}=require('../src/foreman');const {ForemanExecutor}=require('../src/foreman-executor');
 (async()=>{
- const root=fs.mkdtempSync(path.join(os.tmpdir(),'junction-foreman-live-')),repo=path.join(root,'source');fs.mkdirSync(repo);
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-foreman-live-')),repo=path.join(root,'source');fs.mkdirSync(repo);
  fs.writeFileSync(path.join(repo,'answer.js'),'module.exports = n => n + 1;\n');
  fs.writeFileSync(path.join(repo,'answer.test.js'),"const {test}=require('node:test');const assert=require('node:assert/strict');test('adds two',()=>assert.equal(require('./answer')(3),5));\n");
  const git=args=>execFileSync('git',['-C',repo,...args],{windowsHide:true,stdio:'pipe'});git(['init']);git(['add','.']);git(['-c','user.name=Fixture','-c','user.email=fixture@localhost','commit','-m','Fixture baseline']);

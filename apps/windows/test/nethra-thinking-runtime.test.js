@@ -7,7 +7,7 @@ const { providers } = require("../src/model-catalog");
 
 test("official Q4 Thinking is selectable and uses its own context budget", async () => {
   const { normalizeLocalModel } = require("../src/model-catalog");
-  const model = "junction-qwen3-next-thinking:80b-q4km";
+  const model = "nethra-qwen3-next-thinking:80b-q4km";
   assert.equal(normalizeLocalModel("hf.co/Qwen/Qwen3-Next-80B-A3B-Thinking-GGUF:Q4_K_M"), model);
   assert.equal(profileFor(model).thinking, true);
   let payload;
@@ -36,7 +36,7 @@ test("80B Thinking remains a separate, opt-in model profile", () => {
   assert.equal(profileFor(NEXT_80B_THINKING_MODEL).outputTokens, 6144);
   assert.equal(providers.find(provider => provider.id === "local").defaultModel, DEFAULT_MODEL);
   const offered = providers.find(provider => provider.id === "local").models;
-  assert.ok(offered.some(model => model.id === "junction-qwen3-next-thinking:80b-q4km" && model.thinking));
+  assert.ok(offered.some(model => model.id === "nethra-qwen3-next-thinking:80b-q4km" && model.thinking));
   assert.ok(!offered.some(model => model.id === NEXT_80B_THINKING_MODEL));
 });
 

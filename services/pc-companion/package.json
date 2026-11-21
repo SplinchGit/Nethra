@@ -1,8 +1,8 @@
 {
-  "name": "junction-pc-companion",
+  "name": "nethra-pc-companion",
   "private": true,
   "version": "0.1.0",
-  "description": "Local-first, trust-gated Windows context companion for Junction",
+  "description": "Local-first, trust-gated Windows context companion for Nethra",
   "type": "commonjs",
   "engines": { "node": ">=18" },
   "scripts": {

@@ -63,13 +63,13 @@ test('a rejected Claude turn is reported as a usage limit and still records the 
   assert.equal(recorded[0].limitReached,true);
 });
 
-test('only a Claude subscription sign-in counts as ready; Junction never sees the credential',async()=>{
+test('only a Claude subscription sign-in counts as ready; Nethra never sees the credential',async()=>{
   const run=status=>async(_command,args)=>({stdout:args[0]==='--version'?'2.1.306 (Claude Code)\n':JSON.stringify(status)});
   const ready=await getClaudeStatus(run({loggedIn:true,authMethod:'claude.ai',subscriptionType:'pro'}),'claude.exe');
   assert.equal(ready.ready,true);assert.equal(ready.plan,'pro');
   assert.equal((await getClaudeStatus(run({loggedIn:true,authMethod:'api_key'}),'claude.exe')).ready,false);
   assert.equal((await getClaudeStatus(async()=>{throw new Error('not found');},'claude.exe')).installed,false);
-  assert.equal(resolveClaudeExecutable({JUNCTION_CLAUDE_PATH:'D:/claude.exe'},item=>item==='D:/claude.exe'),'D:/claude.exe');
+  assert.equal(resolveClaudeExecutable({NETHRA_CLAUDE_PATH:'D:/claude.exe'},item=>item==='D:/claude.exe'),'D:/claude.exe');
 });
 
 test('the Codex limit query speaks the app-server protocol and converts reset times',async()=>{
@@ -171,7 +171,7 @@ test('a resting advisor points Nethra at the other one when it can answer now',a
   await assert.rejects(tools.execute('consult_codex',{question:'q'},task),/Claude is available now through consult_claude/);
 });
 
-test('advisors get Junction context, a word limit, and a reply that fits the evidence bound with its model intact',async()=>{
+test('advisors get Nethra context, a word limit, and a reply that fits the evidence bound with its model intact',async()=>{
   const calls=[];const task={id:'s',status:'ACTIVE',goal:'Self Improvement',allowCodeWork:true};
   const tools=new NethraTools({store:{get:()=>task},claudeStatus:async()=>({ready:true}),advisorLimits:{check:async()=>({available:true}),invalidate(){},recordClaude(){}},claudeConsult:async input=>{calls.push(input);return {content:'z'.repeat(11_000),model:'claude-sonnet-5-5',usage:{output_tokens:2757}};}});
   const result=await tools.execute('consult_claude',{question:'What are the top bottlenecks?'},task);

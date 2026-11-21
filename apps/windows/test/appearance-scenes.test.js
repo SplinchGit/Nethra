@@ -12,12 +12,12 @@ function sceneHelpers() {
 }
 
 test("every new wallpaper and pastel palette survives reopening without changing independent preferences", t => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-scene-prefs-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-scene-prefs-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const file = path.join(directory, "appearance.json");
   const store = new AppearanceStore(file);
   assert.deepEqual(store.get(), {
-    mode: "system", palette: "junction", artwork: "none", backgroundIntensity: 55,
+    mode: "system", palette: "nethra", artwork: "none", backgroundIntensity: 55,
     petals: true, petalIntensity: 35, motion: "system"
   });
   for (const artwork of ["sakura-waterfall", "sakura-airport", "sakura-city"]) {
@@ -34,7 +34,7 @@ test("every new wallpaper and pastel palette survives reopening without changing
 });
 
 test("legacy appearance files retain their original scene and animation settings", t => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-legacy-prefs-"));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-legacy-prefs-"));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const file = path.join(directory, "appearance.json");
   const legacy = { mode: "dark", palette: "moss", artwork: "sakura-mountain", backgroundIntensity: 70, petals: true, petalIntensity: 45, motion: "full" };

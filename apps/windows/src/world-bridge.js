@@ -118,7 +118,7 @@ function validateInferenceRequest(value) {
 class WorldAuditStore {
   constructor(directory, { rotateBytes = 2 * 1024 * 1024, archives = 8, now = () => Date.now() } = {}) {
     this.directory = directory;
-    this.file = path.join(directory, "junction-world-audit.jsonl");
+    this.file = path.join(directory, "nethra-world-audit.jsonl");
     this.rotateBytes = rotateBytes;
     this.maxArchives = archives;
     this.now = now;
@@ -128,7 +128,7 @@ class WorldAuditStore {
     fs.mkdirSync(directory, { recursive: true });
     this.load();
   }
-  archivePath(index) { return path.join(this.directory, `junction-world-audit.${index}.jsonl.gz`); }
+  archivePath(index) { return path.join(this.directory, `nethra-world-audit.${index}.jsonl.gz`); }
   readLines(file, compressed) {
     if (!fs.existsSync(file)) return [];
     const bytes = fs.readFileSync(file);
@@ -228,7 +228,7 @@ class WorldChatStore {
   }
   enqueue({ deviceId, content, conversationId = "550e8400-e29b-41d4-a716-446655440000", messageId = crypto.randomUUID() } = {}) {
     const deny = reason => {
-      this.auditStore.append({ id: crypto.randomUUID(), occurredAt: new Date(this.now()).toISOString(), category: "SECURITY_DENIAL", summary: "Rejected a Junction World message request.", details: reason.slice(0, 120), actionStatus: "BLOCKED" });
+      this.auditStore.append({ id: crypto.randomUUID(), occurredAt: new Date(this.now()).toISOString(), category: "SECURITY_DENIAL", summary: "Rejected a Nethra World message request.", details: reason.slice(0, 120), actionStatus: "BLOCKED" });
       throw new Error(reason);
     };
     if (typeof deviceId !== "string" || !SAFE_ID.test(deviceId)) return deny("Invalid paired device ID.");
@@ -238,7 +238,7 @@ class WorldChatStore {
     const existing = this.pending.find(item => item.id === messageId);
     if (existing) {
       if (existing.content !== content.trim() || existing.deviceId !== deviceId) throw new Error("Communication ID was reused with different content.");
-      if (!this.auditStore.records?.some(record => record.communicationId === messageId)) this.auditStore.append({ id: crypto.randomUUID(), occurredAt: new Date(existing.queuedAt).toISOString(), category: "COMMUNICATION", summary: "Message sent to Junction World from Android.", details: existing.content, communicationId: messageId, conversationId: existing.conversationId, communicationDirection: "OWNER_TO_AGENT" });
+      if (!this.auditStore.records?.some(record => record.communicationId === messageId)) this.auditStore.append({ id: crypto.randomUUID(), occurredAt: new Date(existing.queuedAt).toISOString(), category: "COMMUNICATION", summary: "Message sent to Nethra World from Android.", details: existing.content, communicationId: messageId, conversationId: existing.conversationId, communicationDirection: "OWNER_TO_AGENT" });
       return { id: messageId, conversationId, status: "QUEUED" };
     }
     if (this.auditStore.records?.some(record => record.communicationId === messageId)) return { id: messageId, conversationId, status: "DELIVERED" };
@@ -248,13 +248,13 @@ class WorldChatStore {
     if (this.deviceTimes.size >= 128 && !this.deviceTimes.has(deviceId)) this.deviceTimes.delete(this.deviceTimes.keys().next().value);
     recent.push(this.now()); this.deviceTimes.set(deviceId, recent);
     this.pending = this.pending.filter(item => this.now() - item.queuedAt < 7 * 24 * 60 * 60_000);
-    if (this.pending.length >= this.maxPending) throw new Error("Junction World's message queue is full.");
+    if (this.pending.length >= this.maxPending) throw new Error("Nethra World's message queue is full.");
     const id = messageId;
     const queuedAt = this.now();
     const item = { id, conversationId, deviceId, content: content.trim(), queuedAt };
     this.pending.push(item); this.persist();
     if (!this.auditStore.records?.some(record => record.communicationId === id)) {
-      this.auditStore.append({ id: crypto.randomUUID(), occurredAt: new Date(queuedAt).toISOString(), category: "COMMUNICATION", summary: "Message sent to Junction World from Android.", details: item.content, communicationId: id, conversationId, communicationDirection: "OWNER_TO_AGENT" });
+      this.auditStore.append({ id: crypto.randomUUID(), occurredAt: new Date(queuedAt).toISOString(), category: "COMMUNICATION", summary: "Message sent to Nethra World from Android.", details: item.content, communicationId: id, conversationId, communicationDirection: "OWNER_TO_AGENT" });
     }
     return { id, conversationId, status: "QUEUED" };
   }
@@ -308,8 +308,8 @@ class WorldBridge {
       }
       const control = await this.getControlState();
       if (control?.paused) {
-        this.recordSecurityDenial("Blocked an inference request while Junction World is paused.");
-        return { status: 423, body: { error: "Junction World is paused." } };
+        this.recordSecurityDenial("Blocked an inference request while Nethra World is paused.");
+        return { status: 423, body: { error: "Nethra World is paused." } };
       }
       if (this.inferenceResults.has(request.requestId)) return this.inferenceResults.get(request.requestId);
       const minuteAgo = this.now() - 60_000;

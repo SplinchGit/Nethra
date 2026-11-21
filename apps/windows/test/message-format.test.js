@@ -10,10 +10,10 @@ assert.deepEqual(messageParts("<script>hello</script>"), [{text:"<script>hello</
 console.log("Safe inline citation rendering passed");
 
 assert.equal(typeof taskActionLog, "function", "Task reports must expose their action log separately from the visible update");
-const progress = 'Progress on "Compare desks": Searched the web.\nRecorded actions:\n• Searched [reviews](https://example.com/reviews) — Nethra\n• Checked prices — Junction\n1 of 4 steps done.\nNext: Compare the shortlist.\nContinuing now.\n\nMy note: Two options look promising.\n\nReply here to steer this task.';
+const progress = 'Progress on "Compare desks": Searched the web.\nRecorded actions:\n• Searched [reviews](https://example.com/reviews) — Nethra\n• Checked prices — Nethra\n1 of 4 steps done.\nNext: Compare the shortlist.\nContinuing now.\n\nMy note: Two options look promising.\n\nReply here to steer this task.';
 assert.deepEqual(taskActionLog(progress), {
   before: 'Progress on "Compare desks": Searched the web.\n',
-  actions: '• Searched [reviews](https://example.com/reviews) — Nethra\n• Checked prices — Junction\n',
+  actions: '• Searched [reviews](https://example.com/reviews) — Nethra\n• Checked prices — Nethra\n',
   after: '1 of 4 steps done.\nNext: Compare the shortlist.\nContinuing now.\n\nMy note: Two options look promising.\n\nReply here to steer this task.',
   count: 2
 });

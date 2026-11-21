@@ -26,7 +26,7 @@ assert.ok(openrouter, "OpenRouter must be selectable");
 assert.deepEqual(openrouter.models.map(model => model.id), [MODEL_ID]);
 assert.equal(openrouter.models[0].name, "Nemotron 3 Ultra (FREE)");
 
-const directory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-openrouter-"));
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-openrouter-"));
 try {
   const store = new LocalDataStore(directory);
   assert.equal(store.setProvider({ id: "openrouter", model: MODEL_ID }).id, "openrouter");
@@ -87,7 +87,7 @@ try {
   await assert.rejects(() => sendChat({ config: { id: "openrouter", model: MODEL_ID }, key: "hidden-key", messages: [{ role: "user", content: "Hi" }], fetchImpl: rateLimited }), /OpenRouter rate limit reached/);
 
   const source = ["../src/main.js", "../src/preload.js", "../renderer/parity.js"].map(file => fs.readFileSync(path.join(__dirname, file), "utf8")).join("\n");
-  assert.match(source, /junction:chat-stream/);
+  assert.match(source, /nethra:chat-stream/);
   assert.match(source, /onChatStream/);
   assert.match(source, /signal:\s*controller\.signal/);
   console.log("OpenRouter Nemotron provider, streaming, tools, cancellation, and error tests passed.");

@@ -46,7 +46,7 @@ function mergeResearch(query, results) {
     }
     return { ...source, id, passages };
   });
-  return { query, engine: "junction", createdAt: Date.now(), sources };
+  return { query, engine: "nethra", createdAt: Date.now(), sources };
 }
 
 function citationAudit(answer, research) {

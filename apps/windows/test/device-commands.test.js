@@ -9,9 +9,9 @@ const selfsigned=require('selfsigned');
 const {DeviceCommandStore,tlsSigner}=require('../src/device-commands');
 const {NethraStore}=require('../src/nethra-store');
 const {NethraApi}=require('../src/nethra-api');
-const {allowedSerial,parseTailnetEndpoint,assertTailnetPeer}=require('../scripts/junction-ops.cjs');
+const {allowedSerial,parseTailnetEndpoint,assertTailnetPeer}=require('../scripts/nethra-ops.cjs');
 
-const tls=(()=>{const generated=selfsigned.generate([{name:'commonName',value:'Junction LAN'}],{keySize:2048,days:1,algorithm:'sha256'});return {key:generated.private,certificate:generated.cert};})();
+const tls=(()=>{const generated=selfsigned.generate([{name:'commonName',value:'Nethra LAN'}],{keySize:2048,days:1,algorithm:'sha256'});return {key:generated.private,certificate:generated.cert};})();
 function fixture(t){
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'device-commands-'));let now=1_800_000_000_000;
   const stores=[];const open=(options={})=>{const store=new DeviceCommandStore(directory,{now:()=>now,...options});stores.push(store);return store;};
@@ -30,7 +30,7 @@ function verify(envelope,pin,seen,now){
 test('commands queued without a key are signed by the host and verify against the pinned SPKI',t=>{
   const f=fixture(t),cli=f.open(),host=f.open({signer:f.signer});
   const command=cli.enqueue({kind:'STATUS',requestedBy:'claude',requestId:'r1'});
-  assert.throws(()=>cli.pull('phone'),/Junction host/);
+  assert.throws(()=>cli.pull('phone'),/Nethra host/);
   const [envelope]=host.pull('phone');
   const body=verify(envelope,f.signer.fingerprint,new Set(),f.now());
   assert.equal(body.id,command.id);assert.equal(body.kind,'STATUS');assert.equal(body.deviceId,'phone');assert.equal(body.instanceId,'instance-1');

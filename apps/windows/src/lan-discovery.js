@@ -3,7 +3,7 @@
 const multicastDns = require("multicast-dns");
 const { Bonjour, Service } = require("bonjour-service");
 
-const SERVICE_TYPE = "_junction._tcp.local";
+const SERVICE_TYPE = "_nethra._tcp.local";
 const normalizeDnsName = value => String(value).trim().replace(/\.+$/, "").toLowerCase();
 
 class MulticastDnsAdvertiser {
@@ -11,7 +11,7 @@ class MulticastDnsAdvertiser {
   publish(record) { this.record = { ...record, txt: { ...record.txt } }; this.mdns = this.mdnsFactory(); this.mdns.on("query", this.listener); this.mdns.on("ready", this.readyListener); this.mdns.on("error", this.errorListener); this.announcementTimer = setInterval(() => this.announce(), 3_000); this.announcementTimer.unref?.(); return this; }
   handleError(error) { this.lastError = error; this.stop(); }
   records() {
-    const generated = new Service({ name: this.record.instanceId, type: "junction", protocol: "tcp", port: this.record.port, host: `${this.record.instanceId}.local`, txt: this.record.txt, disableIPv6: true }).records();
+    const generated = new Service({ name: this.record.instanceId, type: "nethra", protocol: "tcp", port: this.record.port, host: `${this.record.instanceId}.local`, txt: this.record.txt, disableIPv6: true }).records();
     const generatedAddress = generated.find(record => record.type === "A");
     return {
       ptr: generated.find(record => record.type === "PTR"),
@@ -44,7 +44,7 @@ class BonjourAdvertiser {
     // Two adapters on the same LAN must not suppress each other's service
     // through Bonjour's duplicate-name probe. Trust remains the TXT instanceId.
     const serviceName = `${record.instanceId}-${String(record.address).replace(/\./g, "-")}`;
-    this.service = this.bonjour.publish({ name: serviceName, type: "junction", protocol: "tcp", port: record.port, host: `${record.instanceId}.local`, txt: record.txt, disableIPv6: true });
+    this.service = this.bonjour.publish({ name: serviceName, type: "nethra", protocol: "tcp", port: record.port, host: `${record.instanceId}.local`, txt: record.txt, disableIPv6: true });
     const generateRecords = this.service.records.bind(this.service);
     this.service.records = () => generateRecords().filter(item => item.type !== "A" || item.data === record.address);
     return this;

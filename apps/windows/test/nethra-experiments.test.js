@@ -91,7 +91,7 @@ test('a speedup is only reported after a frozen baseline, a recorded change and 
   for(const ms of [9000,9100,9200,9300,9400]) h.chat(ms);
   assert.equal((await h.run({action:'evaluate',id:started.id})).result.verdict,'IMPROVED');
   const activity=progressView(h.store.get(h.task.id),h.store).activity;
-  assert.ok(activity.some(item=>item.actor==='Junction'&&/improved \d+%/.test(item.line)));
+  assert.ok(activity.some(item=>item.actor==='Nethra'&&/improved \d+%/.test(item.line)));
 });
 
 test('a slower result is reported as a regression, and noise as no clear change',async t=>{
@@ -122,14 +122,14 @@ test('Nethra cannot declare a code change; only a verified commit or Work Activi
   assert.equal((await h.run({action:'evaluate',id:started.id})).result.verdict,'WAITING_FOR_CHANGE');
 });
 
-test('a code change only counts samples from a Junction process started after it',async t=>{
+test('a code change only counts samples from a Nethra process started after it',async t=>{
   const r=repo(t),h=harness(t,{readRoots:[r.root]});
   for(const ms of [7000,7100,7200,7300,7400]) h.chat(ms);
   const started=await h.run({action:'start',metric:'chat_response_ms',hypothesis:'Faster prompt assembly'});
   assert.equal(started.changeKind,'code');
   const sha=r.commit('apps/windows/src/runtime.js',h.now()+MIN);h.advance(2*MIN);
   const marked=await h.run({action:'mark_change',id:started.id,commit:sha});
-  assert.match(marked.changeActor,new RegExp(`^Junction \\(commit ${sha}`));
+  assert.match(marked.changeActor,new RegExp(`^Nethra \\(commit ${sha}`));
   for(const ms of [4000,4100,4200,4300,4400]) h.chat(ms);
   assert.equal((await h.run({action:'evaluate',id:started.id})).result.verdict,'WAITING_FOR_RESTART');
   h.advance(MIN);h.store.recordHostStart();h.advance(MIN);

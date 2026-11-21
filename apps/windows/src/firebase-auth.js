@@ -30,10 +30,10 @@ function createCallbackServer(expectedState) {
   const code = new Promise((resolve, reject) => { resolveCode = resolve; rejectCode = reject; });
   const server = http.createServer((request, response) => {
     const url = new URL(request.url, "http://127.0.0.1");
-    if (url.pathname !== "/oauth/callback" || url.searchParams.get("state") !== expectedState) { response.writeHead(400); response.end("Invalid Junction sign-in callback."); return; }
+    if (url.pathname !== "/oauth/callback" || url.searchParams.get("state") !== expectedState) { response.writeHead(400); response.end("Invalid Nethra sign-in callback."); return; }
     if (url.searchParams.get("error")) rejectCode(new Error(`Google sign-in was not completed: ${url.searchParams.get("error")}`));
     else resolveCode(url.searchParams.get("code"));
-    response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end("<h1>Junction is linked</h1><p>You can close this window and return to Junction.</p>");
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" }); response.end("<h1>Nethra is linked</h1><p>You can close this window and return to Nethra.</p>");
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
@@ -42,25 +42,25 @@ function createCallbackServer(expectedState) {
 }
 
 async function refreshFirebaseSession(session, firebaseApiKey, fetchImpl = fetch) {
-  if (!session?.refreshToken) throw new Error("Sign in to Junction again to refresh this device session.");
-  if (!firebaseApiKey) throw new Error("This Junction build cannot refresh its Firebase session.");
+  if (!session?.refreshToken) throw new Error("Sign in to Nethra again to refresh this device session.");
+  if (!firebaseApiKey) throw new Error("This Nethra build cannot refresh its Firebase session.");
   const response = await fetchImpl(`https://securetoken.googleapis.com/v1/token?key=${encodeURIComponent(firebaseApiKey)}`, {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: session.refreshToken })
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Junction account session refresh failed.");
+  if (!response.ok) throw new Error(data.error?.message || "Nethra account session refresh failed.");
   return { ...session, uid: data.user_id || session.uid, idToken: data.id_token, refreshToken: data.refresh_token || session.refreshToken, expiresAt: Date.now() + Number(data.expires_in) * 1000 };
 }
 
-/** Transport identity for paired Junction devices. This does not use Google or account sync. */
+/** Transport identity for paired Nethra devices. This does not use Google or account sync. */
 async function anonymousFirebaseSignIn(firebaseApiKey, fetchImpl = fetch) {
-  if (!firebaseApiKey) throw new Error("This Junction build is missing its Firebase configuration.");
+  if (!firebaseApiKey) throw new Error("This Nethra build is missing its Firebase configuration.");
   const response = await fetchImpl(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(firebaseApiKey)}`, {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ returnSecureToken: true })
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message || "Could not create Junction device identity.");
+  if (!response.ok) throw new Error(data.error?.message || "Could not create Nethra device identity.");
   return { uid: data.localId, idToken: data.idToken, refreshToken: data.refreshToken, expiresAt: Date.now() + Number(data.expiresIn) * 1000, anonymous: true };
 }
 

@@ -132,7 +132,7 @@ test('progress view separates host facts from narration and lists real outputs a
 
 test('task activity distinguishes measured work, Codex advice and a daily budget wait',t=>{
   const f=fixture(t),task=f.store.create({goal:'Self Improvement',mode:'ONGOING'});
-  const first={tool:'read_file',result:{path:'C:/Junction/metrics.json',content:'measured data'}};
+  const first={tool:'read_file',result:{path:'C:/Nethra/metrics.json',content:'measured data'}};
   f.store.update(task.id,{evidence:[first]},'nethra_tool_result');
   f.advance(1000);
   const advice={tool:'consult_codex',result:{source:'codex',advice:'Measure first',verifiedActions:[]}};
@@ -142,12 +142,12 @@ test('task activity distinguishes measured work, Codex advice and a daily budget
   const view=progressView(f.store.get(task.id),f.store,{now:f.now()});
   assert.equal(view.waitingFor.kind,'budget');
   assert.match(view.activity[0].line,/daily model-time limit/i);
-  assert.equal(view.activity[0].actor,'Junction');
+  assert.equal(view.activity[0].actor,'Nethra');
   assert.equal(view.activity[0].model,null);
   assert.match(view.activity[1].line,/Codex.*advice/i);
   assert.equal(view.activity[1].actor,'Codex');
   assert.equal(view.activity[1].model,null,'the host must not invent an unspecified Codex model');
-  assert.match(view.activity[2].line,/Read C:\/Junction\/metrics.json/);
+  assert.match(view.activity[2].line,/Read C:\/Nethra\/metrics.json/);
   assert.equal(view.activity[2].actor,'Nethra');
   assert.equal(view.activity[2].model,'qwen3:30b');
   assert.equal(view.activity[1].kind,'advice');

@@ -3,7 +3,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {Foreman}=require('../src/foreman');
-const fixture=()=>fs.mkdtempSync(path.join(os.tmpdir(),'junction-foreman-'));
+const fixture=()=>fs.mkdtempSync(path.join(os.tmpdir(),'nethra-foreman-'));
 const input={name:'Demo',repoPath:'demo',objective:'Improve the approved demo',tasks:[{title:'Verify baseline',kind:'verify',acceptance:'Existing checks pass'}]};
 const executor={inspect:async()=>({baseSha:'abc',baseBranch:'main'}),run:async()=>({headSha:'def',tests:[{exitCode:0}],summary:'Verified'})};
 

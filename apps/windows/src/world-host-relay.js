@@ -14,14 +14,14 @@ function exactKeys(value, required, optional = []) {
 
 class WorldHostRelay {
   constructor({ bridge, auditStore, controlStore, chatStore, fetchImpl = globalThis.fetch, now = () => Date.now(), onlineIntervalMs = 2_000, offlineIntervalMs = 30_000, controlIntervalMs = 2_000 } = {}) {
-    if (!bridge || typeof bridge.dispatch !== "function" || !auditStore || !controlStore || !chatStore || typeof fetchImpl !== "function") throw new Error("Junction World relay dependencies are required.");
+    if (!bridge || typeof bridge.dispatch !== "function" || !auditStore || !controlStore || !chatStore || typeof fetchImpl !== "function") throw new Error("Nethra World relay dependencies are required.");
     this.bridge = bridge; this.auditStore = auditStore; this.controlStore = controlStore; this.chatStore = chatStore;
     this.fetch = fetchImpl; this.now = now; this.onlineIntervalMs = onlineIntervalMs; this.offlineIntervalMs = offlineIntervalMs;
     this.controlIntervalMs = controlIntervalMs;
     this.running = false; this.timer = null; this.controlTimer = null; this.pending = null; this.controlPending = null; this.state = "OFFLINE"; this.lastSuccessAt = null; this.lastError = null; this.pollCount = 0;
   }
   headers(control = this.controlStore.get()) {
-    return { "content-type": "application/json", "x-junction-paused": control.paused ? "1" : "0", "x-junction-heartbeat-minutes": String(control.heartbeatMinutes), "x-junction-control-revision": String(control.revision) };
+    return { "content-type": "application/json", "x-nethra-paused": control.paused ? "1" : "0", "x-nethra-heartbeat-minutes": String(control.heartbeatMinutes), "x-nethra-control-revision": String(control.revision) };
   }
   async request(path, method, body, control, { timeoutMs = 3_000 } = {}) {
     if (!["/v1/poll", "/v1/control", "/v1/messages", "/v1/inference-result", "/v1/audit/ack"].includes(path)) throw new Error("UNAVAILABLE_ROUTE");
@@ -40,7 +40,7 @@ class WorldHostRelay {
     this.pending = this.performPoll().catch(error => {
       const code = ["INVALID_GUEST_RESPONSE", "OVERSIZED_GUEST_RESPONSE", "UNAVAILABLE_ROUTE"].includes(error.message) ? error.message : "GUEST_UNREACHABLE";
       this.state = code === "GUEST_UNREACHABLE" ? "OFFLINE" : "ERROR"; this.lastError = code;
-      if (code !== "GUEST_UNREACHABLE") this.bridge.recordSecurityDenial?.("Rejected an invalid Junction World relay response.", code);
+      if (code !== "GUEST_UNREACHABLE") this.bridge.recordSecurityDenial?.("Rejected an invalid Nethra World relay response.", code);
       return this.getStatus();
     }).finally(() => { this.pending = null; });
     return this.pending;
@@ -100,7 +100,7 @@ class WorldHostRelay {
       const code = ["INVALID_GUEST_RESPONSE", "OVERSIZED_GUEST_RESPONSE", "UNAVAILABLE_ROUTE"].includes(error.message) ? error.message : "GUEST_UNREACHABLE";
       this.lastError = code;
       if (code === "GUEST_UNREACHABLE") this.state = "OFFLINE";
-      else { this.state = "ERROR"; this.bridge.recordSecurityDenial?.("Rejected an invalid Junction World control response.", code); }
+      else { this.state = "ERROR"; this.bridge.recordSecurityDenial?.("Rejected an invalid Nethra World control response.", code); }
     }).finally(() => {
       this.controlPending = null;
       if (!this.running) return;

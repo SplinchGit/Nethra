@@ -77,7 +77,7 @@ test('runaway thinking is stopped at the budget and the model answers from its r
 });
 
 test('an 80B turn that spends its whole output allowance thinking is asked once for its answer',async()=>{
-  const model='junction-qwen3-next-thinking:80b-q4km',bodies=[];
+  const model='nethra-qwen3-next-thinking:80b-q4km',bodies=[];
   const replies=[{message:{role:'assistant',content:'',thinking:'The newer entry is the current one.'},done:true,done_reason:'length',eval_count:2048,eval_duration:9e9},
     {message:{role:'assistant',content:'Thursdays.'},done:true,eval_count:6,eval_duration:1e9}];
   const fetchImpl=async(url,options={})=>{

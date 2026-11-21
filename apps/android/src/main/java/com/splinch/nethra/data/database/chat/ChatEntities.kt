@@ -1,0 +1,45 @@
+package com.splinch.nethra.data.database.chat
+
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "chat_sessions")
+data class ChatSessionEntity(
+    @PrimaryKey val id: String,
+    val startedAt: Long,
+    val speechModeEnabled: Boolean = false,
+    val agentToolsEnabled: Boolean = true,
+    /** Owner-editable label shown in the chat shelf; null falls back to a generated one. */
+    val title: String? = null,
+    val sharedUpdatedAt: Long = startedAt
+)
+
+/** A durable local guard against stale LAN/Firebase snapshots restoring a deleted chat. */
+@Entity(tableName = "chat_deleted_sessions")
+data class ChatDeletedSessionEntity(
+    @PrimaryKey val id: String,
+    val deletedAt: Long
+)
+
+@Entity(tableName = "chat_messages")
+data class ChatMessageEntity(
+    @PrimaryKey val id: String,
+    val sessionId: String,
+    val timestamp: Long,
+    val sender: String,
+    val content: String,
+    val provenance: String = "UNTRUSTED",
+    val sourceRef: String? = null,
+    // Absolute path to an app-private, pre-downscaled JPEG -- never a raw
+    // content:// URI, since the Photo Picker only grants temporary read
+    // access to those.
+    val imagePath: String? = null,
+    /** Cached one-line description, so replays cost text not image bytes. */
+    val imageSummary: String? = null,
+    /** Friendly provider/model label ("Claude Sonnet 5") for an ASSISTANT message. */
+    val modelLabel: String? = null,
+    val thinking: String? = null,
+    val tokensPerSecond: Double? = null,
+    /** Pre-rendered verbose run metrics for this reply; never reasoning text. */
+    val telemetry: String? = null
+)

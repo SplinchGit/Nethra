@@ -15,7 +15,7 @@ function objectivesFake(){
   return {created,adapter:{create:async input=>{const existing=created.find(item=>item.requestId===input.requestId);if(existing)return existing.task;const task={id:`obj-${created.length+1}-xxxxxxxx`,status:'CREATED',goal:input.goal};created.push({...input,task});return task;},list:async()=>created.map(item=>({...item.task,summary:'Planning'}))}};
 }
 
-test('chat identity is Nethra, not a separate Junction assistant',()=>{
+test('chat and app share the Nethra identity',()=>{
   assert.match(BASELINE,/^You are Nethra/);
   assert.doesNotMatch(BASELINE,/You are Junction/);
 });
@@ -60,7 +60,7 @@ test('chat can send a durable direction to an existing task with the original ow
 test('chat task creation accepts explicit 80B and continuous selection while retaining the existing default',async()=>{
   const {created,adapter}=objectivesFake();
   const registry=new LocalAgentToolRegistry({objectives:adapter});
-  const selected='junction-qwen3-next-thinking:80b-q4km';
+  const selected='nethra-qwen3-next-thinking:80b-q4km';
   await registry.execute('start_objective',{goal:'Keep preparing the workshop notes',continuous:true},{goal:'Use 80B for continuous workshop notes',conversationId:'chat',runId:'create-80b',audit:{model:selected}});
   assert.equal(created[0].model,selected);assert.equal(created[0].continuous,true);
   await registry.execute('start_objective',{goal:'Research another workshop topic'},{goal:'Research the workshop topic',conversationId:'chat',runId:'create-default',audit:{}});

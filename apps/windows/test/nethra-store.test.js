@@ -84,8 +84,8 @@ test('reopening preserves checkpoints and event order',t=>{const f=fixture(t),s=
 
 test('switching an objective model preserves its portable working state',t=>{
   const f=fixture(t),s=f.open();
-  const task=s.create({goal:'Revise essay',model:'junction-qwen3-next:80b-q3km'});
-  assert.equal(task.model,'junction-qwen3-next:80b-q3km');
+  const task=s.create({goal:'Revise essay',model:'nethra-qwen3-next:80b-q3km'});
+  assert.equal(task.model,'nethra-qwen3-next:80b-q3km');
   const saved=s.update(task.id,{plan:['Read draft'],contextCheckpoint:{activeHypothesis:'Tighten opening'},evidence:[{tool:'read_file',result:{content:'draft'}}]});
   const changed=s.configure(task.id,{model:'qwen3:30b'},saved.revision,'switch-model');
   assert.equal(changed.model,'qwen3:30b');
@@ -93,7 +93,7 @@ test('switching an objective model preserves its portable working state',t=>{
   assert.deepEqual(changed.contextCheckpoint,{activeHypothesis:'Tighten opening'});
   assert.equal(changed.evidence.length,1);
   assert.throws(()=>s.configure(task.id,{model:'unknown'},changed.revision,'bad-model'),/model/i);
-  assert.equal(s.create({goal:'New objective default'}).model,'junction-qwen3-next-thinking:80b-q4km');
+  assert.equal(s.create({goal:'New objective default'}).model,'nethra-qwen3-next-thinking:80b-q4km');
 });
 test('reopening preserves the exact pending review as task working context',t=>{
   const f=fixture(t),s=f.open(),task=s.create({goal:'Improve prompt context'});

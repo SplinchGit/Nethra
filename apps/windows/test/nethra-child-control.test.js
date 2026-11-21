@@ -101,7 +101,7 @@ test('paired task detail keeps the active child and bounds historical child summ
 
 test('owner-launched agents are durable task records with their own scope and stop controls',async t=>{
   const {store,dir,api}=fixture(t);
-  const parent=store.create({goal:'Funding project',projectId:'funding',model:'junction-qwen3-next:80b-q3km',allowCodeWork:true,readRoots:[dir]});
+  const parent=store.create({goal:'Funding project',projectId:'funding',model:'nethra-qwen3-next:80b-q3km',allowCodeWork:true,readRoots:[dir]});
   const request={id:parent.id,goal:'Draft the funding criteria summary'};
   const {task:agent}=await api.dispatch('nethra.agent.create',request,'launch-agent','android');
   assert.equal(agent.parentId,parent.id);assert.equal(agent.model,parent.model);assert.equal(agent.projectId,parent.projectId);

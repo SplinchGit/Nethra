@@ -58,7 +58,7 @@ class PairedConversationSync {
           if (!Array.from({ length: value.count }, (_, index) => Object.hasOwn(parts, index)).every(Boolean)) continue;
           value = { ...value, content: Array.from({ length: value.count }, (_, index) => parts[index]).join("") };
         }
-        if (conversation) this.store.mergeSharedConversation(conversation, [{ id: value.id, content: value.content, createdAt: value.createdAt, role: canonicalRole(value.role), provenance: ["OWNER", "JUNCTION", "UNTRUSTED"].includes(value.provenance) ? value.provenance : "UNTRUSTED", sourceRef: `shared:paired:${value.id}` }]);
+        if (conversation) this.store.mergeSharedConversation(conversation, [{ id: value.id, content: value.content, createdAt: value.createdAt, role: canonicalRole(value.role), provenance: ["OWNER", "NETHRA", "UNTRUSTED"].includes(value.provenance) ? value.provenance : "UNTRUSTED", sourceRef: `shared:paired:${value.id}` }]);
         if (record.kind === "message_part") { delete this.parts[`${record.conversationId}:${value.id}`]; this.saveParts(); }
       } else throw new Error("Unknown conversation sync record.");
     }

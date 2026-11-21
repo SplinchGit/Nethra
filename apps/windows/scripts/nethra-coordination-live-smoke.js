@@ -1,7 +1,7 @@
 "use strict";
 // Explicitly invoked integration proof for Self Improvement coordination:
 // consultation -> owner decision -> draft review -> Start -> Pause/Resume -> engineering -> verification -> notification.
-// Uses the owner's signed-in Codex and Claude once each on a throwaway repository; never touches Junction's checkout.
+// Uses the owner's signed-in Codex and Claude once each on a throwaway repository; never touches Nethra's checkout.
 // `--rehearsal` replaces the providers with fixtures to check this script's own plumbing. A rehearsal is not evidence.
 // Every stage is reported as PASSED, UNAVAILABLE (a real service could not run; never counted as a pass) or FAILED.
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),assert=require('node:assert/strict');
@@ -28,7 +28,7 @@ const until=async(check,timeoutMs,label)=>{const end=Date.now()+timeoutMs;for(;;
 const BRIEF='GPT brief: This is a bounded integration check. In apps/windows/answer.js the exported function adds one; it must add two. Propose exactly that single-file change to apps/windows/answer.js as the improvement, with the test being that answer(3) equals 5 and the existing npm test passes unchanged.';
 
 (async()=>{
- const root=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-coordination-live-')),repo=path.join(root,'Junction'),app=path.join(repo,'apps','windows');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'nethra-coordination-live-')),repo=path.join(root,'Nethra'),app=path.join(repo,'apps','windows');
  report.root=root;
  fs.mkdirSync(path.join(app,'test'),{recursive:true});
  fs.writeFileSync(path.join(app,'answer.js'),'module.exports = n => n + 1;\n');
@@ -50,7 +50,7 @@ const BRIEF='GPT brief: This is a bounded integration check. In apps/windows/ans
    return allowsCoordinationWork(nethraStore.get(project.sourceObjectiveId),project);
   }});
   const advisorLimits=new AdvisorLimits({store:nethraStore});executor.advisorLimits=advisorLimits;
-  const runner=new NethraRunner({store:nethraStore,runtime:{},proposeCodeWork:createCodeWorkProposer({foreman,junctionRepository:repo,assertObjective:id=>nethraStore.get(id)}),workStatus:createWorkStatus(foreman),advisorLimits,projectById:id=>foreman.find(id)});
+  const runner=new NethraRunner({store:nethraStore,runtime:{},proposeCodeWork:createCodeWorkProposer({foreman,nethraRepository:repo,assertObjective:id=>nethraStore.get(id)}),workStatus:createWorkStatus(foreman),advisorLimits,projectById:id=>foreman.find(id)});
   if(rehearsal){
    const advice='Friction: answer.js adds one.\nImprovement: Change apps/windows/answer.js so the exported function adds two.\nTest: Verify answer(3) equals 5 and the existing npm test passes unchanged.';
    const gate={available:true,detail:'fixture'};

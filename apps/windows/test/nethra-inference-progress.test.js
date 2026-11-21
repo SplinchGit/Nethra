@@ -1,7 +1,7 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {progressView}=require('../src/nethra-progress');
-const model='junction-qwen3-next:80b-q3km';
+const model='nethra-qwen3-next:80b-q3km';
 const task={id:'measured-task',goal:`Benchmark ${model} on 50 identical prompts using fixed context`,status:'ACTIVE',model,plan:['Continue running 47 more samples','Report the result'],completedSteps:[],pendingSteps:['Continue running 47 more samples','Report the result'],evidence:[]};
 const store={modelJobs:()=>[{id:'job',model,status:'COMPLETED',request:{samples:50},samples:Array.from({length:50},(_,i)=>({index:i+1}))}],recentTaskEvents:()=>[],actions:()=>[],approvals:()=>[]};
 test('live benchmark progress shows verified samples instead of a stale remaining-samples plan',()=>{

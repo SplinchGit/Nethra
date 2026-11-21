@@ -5,7 +5,7 @@ Add-Type -AssemblyName UIAutomationTypes
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
-public static class JunctionNativeWindow {
+public static class NethraNativeWindow {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
 }
 '@
@@ -16,7 +16,7 @@ function Limit-Text([string]$Value) {
   return $Value.Substring(0, 500)
 }
 
-$handle = [JunctionNativeWindow]::GetForegroundWindow()
+$handle = [NethraNativeWindow]::GetForegroundWindow()
 if ($handle -eq [IntPtr]::Zero) { throw 'No foreground window is available.' }
 $root = [System.Windows.Automation.AutomationElement]::FromHandle($handle)
 if ($null -eq $root) { throw 'The foreground window does not expose UI Automation metadata.' }

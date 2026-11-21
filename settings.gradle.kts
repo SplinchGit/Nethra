@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Junction"
+rootProject.name = "Nethra"
 include(":app")
 project(":app").projectDir = file("apps/android")
 // Avatar module is intentionally parked while the replacement is designed.

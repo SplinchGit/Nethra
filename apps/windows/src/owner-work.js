@@ -28,7 +28,7 @@ function resolveOwnerWork({content,conversationId,projects=[],roots=[]}){
  const message=String(content||"").trim();if(!message)return null;
  const named=namedProject(message,projects),current=named||associated(projects,conversationId);
  const command=message.replace(/^(?:(?:can|could|would) you\s+)?(?:please\s+)?/i,"").replace(/[.!?]+$/,"").trim();
- const status=/^(?:what (?:are you|is junction) working on|how (?:is|are) (?:the |my |our )?(?:work|tasks?|projects?) (?:going|progressing)|(?:what(?:'s| is) (?:the )?status(?: of .+)?|(?:show|list)(?: me)? (?:the |all |current |my )*(?:work|tasks?|projects?)(?: status)?|(?:give me|show me) (?:an? )?(?:update|status) on .+))$/i.test(command);
+ const status=/^(?:what (?:are you|is nethra) working on|how (?:is|are) (?:the |my |our )?(?:work|tasks?|projects?) (?:going|progressing)|(?:what(?:'s| is) (?:the )?status(?: of .+)?|(?:show|list)(?: me)? (?:the |all |current |my )*(?:work|tasks?|projects?)(?: status)?|(?:give me|show me) (?:an? )?(?:update|status) on .+))$/i.test(command);
  if(status)return {action:"status",projectId:/\ball\b/i.test(command)?null:current?.id||null};
  if(DISCUSSION.test(message))return null;
  const control=command.match(/^(stop|pause|cancel|resume|continue)(?:\s+(.+))?$/i);

@@ -1,5 +1,5 @@
 "use strict";
-// The owner-only Junction API must remain reachable after switching between
+// The owner-only Nethra API must remain reachable after switching between
 // an encrypted overlay and a phone hotspot. Each connection uses pinned TLS
 // and device authentication even on an untrusted physical LAN.
 const assert = require("node:assert/strict");

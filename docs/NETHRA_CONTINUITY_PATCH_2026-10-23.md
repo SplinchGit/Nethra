@@ -8,7 +8,7 @@ This patch keeps the Windows host authoritative for objectives, wake decisions, 
 - Android has a chat `+` menu for attachments, Force research, and verbose telemetry. Verbose telemetry is persisted and enabled by default. Its objective controls are a sheet inside Chat rather than a separate Nethra tab. Offline state is labelled with the last sync time when available.
 - Android attempts the paired, pinned LAN connection first, then the encrypted Firebase relay when LAN fails before a chat request is sent. Once a chat request may have reached the PC, the client does not retry it over a second transport. Objective mutations retain their request ID across transport attempts. Relay telemetry is encrypted with the paired key.
 - Quiet objectives do not wake for speculative reflection. Balanced and Active objectives may receive one initiative review after a new meaningful progress checkpoint, at least one hour or fifteen minutes later respectively. An unchanged checkpoint is deduplicated. Six consecutive short wakes without progress move an objective to `WAITING_FOR_USER`.
-- Local inference remains serial. Interactive turns take priority, with a background turn after at most three waiting interactive turns. The Junction World bridge now enables thinking for the installed thinking-only model and routes inference through that queue.
+- Local inference remains serial. Interactive turns take priority, with a background turn after at most three waiting interactive turns. The Nethra World bridge now enables thinking for the installed thinking-only model and routes inference through that queue.
 
 ## Verification
 
@@ -27,8 +27,8 @@ This patch keeps the Windows host authoritative for objectives, wake decisions, 
 
 ## Run and smoke test
 
-Windows: open `Desktop\Nethra.lnk`. The task drawer is available from Chat. The host scheduler is installed as the `Junction Nethra <SID>` scheduled task. Preserve `%APPDATA%\junction-windows` when rebuilding.
+Windows: open `Desktop\Nethra.lnk`. The task drawer is available from Chat. The host scheduler is installed as the `Nethra Nethra <SID>` scheduled task. Preserve `%APPDATA%\nethra-windows` when rebuilding.
 
 Android: install `apps\android\build\outputs\apk\debug\app-debug.apk` on an authorized device. Pair it to the PC in Settings. Check Chat `+` options and telemetry, open Tasks inside Chat, then test a short 30B turn over hotspot and hostel WiFi. On hostel WiFi, confirm that the connection status changes to encrypted relay when paired LAN is unreachable. Do not use wireless ADB on the untrusted hostel network without a private, authenticated transport.
 
-For a Windows package rebuild, follow `apps/windows/AGENTS.md`: disable the Nethra scheduled task, ensure no objective lease is active, stop Junction, set `JUNCTION_PACK_OUTPUT=nethra-agent-chat-20261022`, run `npm run pack:workspace` and `npm run desktop`, launch the desktop shortcut, verify port 43111, and re-enable the task.
+For a Windows package rebuild, follow `apps/windows/AGENTS.md`: disable the Nethra scheduled task, ensure no objective lease is active, stop Nethra, set `NETHRA_PACK_OUTPUT=nethra-agent-chat-20261022`, run `npm run pack:workspace` and `npm run desktop`, launch the desktop shortcut, verify port 43111, and re-enable the task.

@@ -38,7 +38,7 @@ class DeviceCommandStore {
     this.now=now;this.signer=signer;fs.mkdirSync(directory,{recursive:true});
     this.db=new DatabaseSync(path.join(path.resolve(directory),DB_FILE));
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
-    if(this.db.prepare('PRAGMA user_version').get().user_version>1){this.db.close();throw new Error('Device command queue requires a newer Junction');}
+    if(this.db.prepare('PRAGMA user_version').get().user_version>1){this.db.close();throw new Error('Device command queue requires a newer Nethra');}
     this.db.exec('CREATE TABLE IF NOT EXISTS commands(id TEXT PRIMARY KEY, requestId TEXT UNIQUE, state TEXT NOT NULL, deviceId TEXT NOT NULL, expiresAt INTEGER NOT NULL, body TEXT NOT NULL); CREATE INDEX IF NOT EXISTS commands_state ON commands(state,expiresAt); PRAGMA user_version=1;');
   }
   transaction(fn) {this.db.exec('BEGIN IMMEDIATE');try{const result=fn();this.db.exec('COMMIT');return result;}catch(error){this.db.exec('ROLLBACK');throw error;}}
@@ -84,7 +84,7 @@ class DeviceCommandStore {
   /** Signs on first delivery; redelivers the same envelope if the phone never answered. */
   pull(deviceId,{limit=5,notificationPolicy=()=>'hold'}={}) {
     const signer=typeof this.signer==='function'?this.signer():this.signer;
-    if(!signer)throw new Error('Device commands can be delivered only by the Junction host');
+    if(!signer)throw new Error('Device commands can be delivered only by the Nethra host');
     if(typeof deviceId!=='string'||!deviceId||deviceId.length>160)throw new Error('Invalid device');
     return this.transaction(()=>{
       this.expireInside();

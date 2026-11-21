@@ -42,12 +42,12 @@ relevant tests before the next begins.
 ## Device validation
 
 - [x] 23 instrumentation tests pass on a physical SM-A528B device.
-- [x] The device build uses the existing `JUNCTION_VERSION_CODE` override so
+- [x] The device build uses the existing `NETHRA_VERSION_CODE` override so
   validation can install over a newer published build without changing source.
 - [x] The version-66 debug APK from `apps/android` installs successfully as an
   in-place update after the repository-level module move.
 - [x] Android reports a successful cold start for `.app.MainActivity` and the
-  Junction process remains alive while the system permission prompt is shown.
+  Nethra process remains alive while the system permission prompt is shown.
 
 ## Phase 11 validation
 
@@ -57,7 +57,7 @@ relevant tests before the next begins.
 
 ## Phase 12 validation
 
-- [x] `Junction.code-workspace` exists, parses as JSON, and exposes direct
+- [x] `Nethra.code-workspace` exists, parses as JSON, and exposes direct
   Explorer roots for Android source areas, unit tests, and device tests.
 - [x] Explorer and search exclusions hide generated output without hiding
   source, tests, documentation, Gradle configuration, or workflows.

@@ -15,7 +15,7 @@ Use these placement rules when moving or adding production code.
 
 Do not create generic catch-all packages such as `misc`, `helpers`, `common`,
 `manager`, or `other`. Avoid loose implementation files in
-`com.splinch.junction`; only true application entry points may live near the
+`com.splinch.nethra`; only true application entry points may live near the
 root, and they should ultimately be in `app`.
 
 Use feature-first packages for capabilities the owner experiences directly and

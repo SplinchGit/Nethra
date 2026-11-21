@@ -27,7 +27,7 @@ Recall took 0.08 ms on average (0.21 ms maximum) over 23 facts. A memory write t
 
 ## 80B before and after the memory change
 
-The owner's chat model is `junction-qwen3-next-thinking:80b-q4km`, so the comparison that counts is on that model. "Before" ran at `54a947b`. "After" ran at `7ccd15b` on 14 Nov 2026, with each fact dated to its fixture day and the automatic trace judging every fact as it was added. Scores are from reading every reply, one run each.
+The owner's chat model is `nethra-qwen3-next-thinking:80b-q4km`, so the comparison that counts is on that model. "Before" ran at `54a947b`. "After" ran at `7ccd15b` on 14 Nov 2026, with each fact dated to its fixture day and the automatic trace judging every fact as it was added. Scores are from reading every reply, one run each.
 
 | Ability | Before | After | Notes |
 | --- | --- | --- | --- |

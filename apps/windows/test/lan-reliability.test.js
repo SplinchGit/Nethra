@@ -7,7 +7,7 @@ const path = require("node:path");
 const { LanIdentityStore } = require("../src/lan-identity");
 
 test("missing identity is new, but corrupt or unavailable encrypted identity fails closed", () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "junction-lan-"));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-lan-"));
   try {
     const store = new LanIdentityStore(dir, { isEncryptionAvailable: () => true, decryptString: () => { throw new Error("secret contents"); } });
     assert.equal(store.getTlsIdentity(), null);
@@ -43,7 +43,7 @@ test("relay recovers after absent NIC, DHCP changes, listener failure, and keeps
 
 test("workspace dependency closure includes LAN modules and can load outside the workspace", () => {
   const { copyRuntimeDependencies, validateRuntimeDependencies } = require("../scripts/pack-workspace");
-  const stage = fs.mkdtempSync(path.join(os.tmpdir(), "junction-package-"));
+  const stage = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-package-"));
   try {
     copyRuntimeDependencies(path.resolve(__dirname, ".."), stage);
     validateRuntimeDependencies(stage);

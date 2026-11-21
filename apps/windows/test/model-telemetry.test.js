@@ -39,7 +39,7 @@ test("tool requests that never executed are not reported as executed tools", () 
   assert.match(telemetryLine({ toolCalls: 2, toolsExecuted: 0 }), /2 tool requests; none executed/);
 });
 
-test("generation speed uses host eval timing, not Junction wall clock", () => {
+test("generation speed uses host eval timing, not Nethra wall clock", () => {
   const timings = newTimings();
   addTimings(timings, { eval_count: 100, eval_duration: 2_000_000_000, prompt_eval_duration: 500_000_000, load_duration: 28_000_000_000 });
   addTimings(timings, { eval_count: 50, eval_duration: 1_000_000_000 });

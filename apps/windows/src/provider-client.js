@@ -4,7 +4,7 @@ const PROVIDERS={
   openai:{ baseUrl:"https://api.openai.com/v1", model:"gpt-5.6-luna", kind:"openai" },
   anthropic:{ baseUrl:"https://api.anthropic.com/v1", model:"claude-haiku-4-5", kind:"anthropic" },
   nvidia:{ baseUrl:"https://integrate.api.nvidia.com/v1", model:"nvidia/nemotron-3-ultra-550b-a55b", kind:"openai" },
-  openrouter:{ baseUrl:"https://openrouter.ai/api/v1", model:"nvidia/nemotron-3-ultra-550b-a55b:free", kind:"openai-stream", extraHeaders:{"HTTP-Referer":"https://junction.app","X-Title":"Junction"} },
+  openrouter:{ baseUrl:"https://openrouter.ai/api/v1", model:"nvidia/nemotron-3-ultra-550b-a55b:free", kind:"openai-stream", extraHeaders:{"HTTP-Referer":"https://nethra.app","X-Title":"Nethra"} },
   custom:{ baseUrl:"", model:"", kind:"openai" }
 };
 const { BASELINE, canonicalHistory, memoryContext } = require("./assistant-context");
@@ -101,21 +101,22 @@ async function sendOpenRouterChat({base,model,key,prompt,fetchImpl,signal,onChun
       if(!result.content) throw new Error("OpenRouter returned an empty response. The free Nemotron endpoint may be temporarily unavailable.");
       return {content:result.content,model:actualModel,usage:{prompt_tokens:promptTokens,completion_tokens:completionTokens,...(reasoningTokens?{completion_tokens_details:{reasoning_tokens:reasoningTokens}}:{})},toolCalls:toolNames.length,toolsExecuted:toolNames.length,toolNames:[...new Set(toolNames)],reasoningCharacters,thinkingState:reasoningCharacters||reasoningTokens?"reported":"enabled_no_output",iterations:iteration+1};
     }
-    if (!executeTool) throw new Error("OpenRouter requested a Junction tool, but tools are unavailable for this run.");
+    if (!executeTool) throw new Error("OpenRouter requested a Nethra tool, but tools are unavailable for this run.");
     messages.push({role:"assistant",content:result.content||null,tool_calls:result.toolCalls});
     for (const call of result.toolCalls) {
       signal?.throwIfAborted();
       const name=String(call.function?.name||""); let args;
-      try { args=JSON.parse(call.function?.arguments||"{}"); } catch { throw new Error(`OpenRouter returned malformed arguments for ${name||"a Junction tool"}.`); }
+      try { args=JSON.parse(call.function?.arguments||"{}"); } catch { throw new Error(`OpenRouter returned malformed arguments for ${name||"a Nethra tool"}.`); }
       const output=await executeTool(name,args);
       signal?.throwIfAborted();
       toolNames.push(name);
       messages.push({role:"tool",tool_call_id:call.id,name,content:String(output?.content??output??"").slice(0,8000)});
     }
   }
-  throw new Error("OpenRouter reached Junction's tool-call limit without a final answer.");
+  throw new Error("OpenRouter reached Nethra's tool-call limit without a final answer.");
 }
 async function sendChat({config,key,messages,memories,context,research,fetchImpl=fetch,signal=null,onChunk=null,tools=[],executeTool=null}){
+  if(["openai","anthropic"].includes(config.id))throw new Error("Paid GPT and Claude API access is disabled. Select the subscription provider.");
   const definition=PROVIDERS[config.id]; if(!definition) throw new Error("Configure an AI provider first."); if(!definition.keyless&&!key) throw new Error("This PC does not have an API key for the selected provider.");
   const base=((config.id==="custom"?config.baseUrl:"")||definition.baseUrl).replace(/\/$/,"" ); const model=config.model||definition.model; if(!base||!model) throw new Error("Provider base URL and model are required.");
   const parsed=new URL(base); if(parsed.protocol!=="https:"&&!['127.0.0.1','localhost','::1'].includes(parsed.hostname)) throw new Error("Custom providers must use HTTPS or loopback.");

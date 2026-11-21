@@ -30,7 +30,7 @@ function readCodexLimits({launch=spawn,timeoutMs=20_000}={}){
         }
       }
     });
-    send({id:0,method:'initialize',params:{clientInfo:{name:'junction',version:'1'}}});
+    send({id:0,method:'initialize',params:{clientInfo:{name:'nethra',version:'1'}}});
   });
 }
 

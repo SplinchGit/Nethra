@@ -42,7 +42,7 @@ class NethraStore {
     this.db = new DatabaseSync(path.join(this.directory,'nethra.sqlite'));
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;');
     const version = this.db.prepare('PRAGMA user_version').get().user_version;
-    if (version > 6) { this.db.close(); throw new Error('Nethra database requires a newer Junction'); }
+    if (version > 6) { this.db.close(); throw new Error('Nethra database requires a newer Nethra'); }
     this.transaction(() => this.db.exec(`
       CREATE TABLE IF NOT EXISTS tasks(id TEXT PRIMARY KEY, body TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, taskId TEXT NOT NULL, at INTEGER NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL);
@@ -70,7 +70,7 @@ class NethraStore {
       this.db.exec('CREATE TABLE IF NOT EXISTS attention(id TEXT PRIMARY KEY, taskId TEXT NOT NULL, source TEXT NOT NULL, sourceId TEXT NOT NULL, revision TEXT NOT NULL, dueAt INTEGER NOT NULL, state TEXT NOT NULL, leaseToken TEXT, body TEXT NOT NULL); CREATE INDEX IF NOT EXISTS attention_due ON attention(state,dueAt);');
       // Objectives created before schema 4 get the same profile defaults the clients display.
       for(const row of this.db.prepare('SELECT body FROM tasks').all()){
-        const task=JSON.parse(row.body);if(CHECK_INS.has(task.checkIn)||TERMINAL.has(task.status))continue;
+        const task=require("./brand-compatibility").parseStored(row.body);if(CHECK_INS.has(task.checkIn)||TERMINAL.has(task.status))continue;
         Object.assign(task,{autonomy:AUTONOMY.has(task.autonomy)?task.autonomy:'BALANCED',priority:Number.isSafeInteger(task.priority)&&task.priority>=1&&task.priority<=5?task.priority:3,checkIn:'WEEKLY',lastMeaningfulProgressAt:task.lastMeaningfulProgressAt??null,lastDirectionAt:this.now(),nextDirectionCheckAt:this.now()+7*DAY,lastMilestoneCount:(task.completedSteps||[]).length});
         this.db.prepare('UPDATE tasks SET body=? WHERE id=?').run(JSON.stringify(task),task.id);
         this.db.prepare('INSERT INTO events(taskId,at,kind,detail) VALUES(?,?,?,?)').run(task.id,this.now(),'PROFILE_DEFAULTED',JSON.stringify({autonomy:task.autonomy,priority:task.priority,checkIn:'WEEKLY'}));
@@ -78,14 +78,14 @@ class NethraStore {
       if(version<4)this.db.exec('PRAGMA user_version=4');
     });
     this.transaction(()=>{
-      // Schema 5: measured before/after experiments, Junction start times, and the last live advisor usage reading.
+      // Schema 5: measured before/after experiments, Nethra start times, and the last live advisor usage reading.
       this.db.exec('CREATE TABLE IF NOT EXISTS experiments(id TEXT PRIMARY KEY, taskId TEXT NOT NULL, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS host_starts(at INTEGER NOT NULL); CREATE TABLE IF NOT EXISTS advisor_limits(provider TEXT PRIMARY KEY, body TEXT NOT NULL);');
       if(version<5)this.db.exec('PRAGMA user_version=5');
     });
     this.transaction(()=>{
       this.db.exec('CREATE TABLE IF NOT EXISTS task_deletions(id TEXT PRIMARY KEY, body TEXT NOT NULL);');
       if(version<6)for(const row of this.db.prepare('SELECT binding,body FROM requests').all()){
-        const binding=JSON.parse(row.binding),result=JSON.parse(row.body);
+        const binding=JSON.parse(row.binding),result=require("./brand-compatibility").parseStored(row.body);
         if(binding.kind==='remove'&&result.deleted===true&&!this.db.prepare('SELECT 1 FROM tasks WHERE id=?').get(binding.id)){
           this.db.prepare('INSERT OR IGNORE INTO task_deletions VALUES(?,?)').run(binding.id,JSON.stringify({...result,deletedAt:this.now(),workspace:path.join(this.directory,'workspaces',binding.id),cleanup:{workspace:'PENDING',related:'PENDING',error:null}}));
         }
@@ -94,14 +94,14 @@ class NethraStore {
     });
   }
   transaction(fn) { this.db.exec('BEGIN IMMEDIATE'); try {const result=fn();this.db.exec('COMMIT');return result;} catch(error){this.db.exec('ROLLBACK');throw error;} }
-  list() {return this.db.prepare('SELECT body FROM tasks ORDER BY rowid DESC').all().map(r=>({model:DEFAULT_MODEL,...JSON.parse(r.body)}));}
+  list() {return this.db.prepare('SELECT body FROM tasks ORDER BY rowid DESC').all().map(r=>({model:DEFAULT_MODEL,...require("./brand-compatibility").parseStored(r.body)}));}
   /** The objective currently holding the inference lease, if any (at most one runs at a time). */
   liveTaskId() {const lease=this.db.prepare('SELECT taskId,expiresAt FROM lease WHERE singleton=1').get();return lease&&lease.expiresAt>this.now()?lease.taskId:null;}
-  get(id) {const row=this.db.prepare('SELECT body FROM tasks WHERE id=?').get(id);if(!row){this.assertNotDeleted(id);throw new Error('Unknown Nethra task');}return {model:DEFAULT_MODEL,...JSON.parse(row.body)};}
+  get(id) {const row=this.db.prepare('SELECT body FROM tasks WHERE id=?').get(id);if(!row){this.assertNotDeleted(id);throw new Error('Unknown Nethra task');}return {model:DEFAULT_MODEL,...require("./brand-compatibility").parseStored(row.body)};}
   linkConversation(id,conversationId) {return this.transaction(()=>{const task=this.get(id);if(task.conversationId)return structuredClone(task);if(typeof conversationId!=='string'||!/^[A-Za-z0-9_-]{1,160}$/.test(conversationId))throw new Error('Invalid conversation ID');task.conversationId=conversationId;return this.save(task,'CHAT_LINKED',{conversationId});});}
   save(task,kind,detail={}) {this.assertNotDeleted(task.id);const previous=this.db.prepare('SELECT body FROM tasks WHERE id=?').get(task.id);if(!previous||JSON.parse(previous.body).status!==task.status)detail={...detail,status:task.status};task.revision++;task.updatedAt=this.now();this.db.prepare('INSERT INTO tasks VALUES(?,?) ON CONFLICT(id) DO UPDATE SET body=excluded.body').run(task.id,JSON.stringify(task));this.db.prepare('INSERT INTO events(taskId,at,kind,detail) VALUES(?,?,?,?)').run(task.id,this.now(),kind,JSON.stringify(detail));return structuredClone(task);}
-  modelJobs(taskId){return this.db.prepare('SELECT body FROM model_jobs WHERE taskId=? ORDER BY rowid').all(taskId).map(row=>JSON.parse(row.body));}
-  modelJob(taskId,id){const row=this.db.prepare('SELECT body FROM model_jobs WHERE taskId=? AND id=?').get(taskId,id);if(!row)throw Error('Unknown model job for this task');return JSON.parse(row.body);}
+  modelJobs(taskId){return this.db.prepare('SELECT body FROM model_jobs WHERE taskId=? ORDER BY rowid').all(taskId).map(row=>require("./brand-compatibility").parseStored(row.body));}
+  modelJob(taskId,id){const row=this.db.prepare('SELECT body FROM model_jobs WHERE taskId=? AND id=?').get(taskId,id);if(!row)throw Error('Unknown model job for this task');return require("./brand-compatibility").parseStored(row.body);}
   createModelJob(taskId,id,input,token){return this.transaction(()=>{
     this.assertRunnable(taskId,token);const binding=canonical(input),old=this.db.prepare('SELECT * FROM model_jobs WHERE id=?').get(id);
     if(old){if(old.taskId!==taskId||old.binding!==binding)throw Error('Model job payload mismatch');return this.replay(old);}
@@ -177,9 +177,9 @@ class NethraStore {
     return {seq:last.seq,at:last.at,start,readyAt,count};
   }
   recentEvents(since=0,limit=40) {return this.db.prepare('SELECT seq,taskId,at,kind,detail FROM events WHERE at>=? ORDER BY seq DESC LIMIT ?').all(since,limit).map(row=>({seq:row.seq,taskId:row.taskId,at:row.at,kind:row.kind,detail:JSON.parse(row.detail)}));}
-  attention(id) {return this.db.prepare('SELECT body,state FROM attention WHERE taskId=? ORDER BY dueAt DESC,id DESC LIMIT 500').all(id).reverse().map(row=>({...JSON.parse(row.body),state:row.state}));}
-  pendingAttentionDue(id) {return this.db.prepare('SELECT body FROM attention WHERE taskId=? AND state=\'PENDING\' ORDER BY dueAt LIMIT 100').all(id).map(row=>JSON.parse(row.body)).find(item=>item.reasoningRequired)?.dueAt??null;}
-  hasClaimedReasoningAttention(id,token) {return this.db.prepare('SELECT body FROM attention WHERE taskId=? AND state=\'CLAIMED\' AND leaseToken=?').all(id,token).some(row=>JSON.parse(row.body).reasoningRequired);}
+  attention(id) {return this.db.prepare('SELECT body,state FROM attention WHERE taskId=? ORDER BY dueAt DESC,id DESC LIMIT 500').all(id).reverse().map(row=>({...require("./brand-compatibility").parseStored(row.body),state:row.state}));}
+  pendingAttentionDue(id) {return this.db.prepare('SELECT body FROM attention WHERE taskId=? AND state=\'PENDING\' ORDER BY dueAt LIMIT 100').all(id).map(row=>require("./brand-compatibility").parseStored(row.body)).find(item=>item.reasoningRequired)?.dueAt??null;}
+  hasClaimedReasoningAttention(id,token) {return this.db.prepare('SELECT body FROM attention WHERE taskId=? AND state=\'CLAIMED\' AND leaseToken=?').all(id,token).some(row=>require("./brand-compatibility").parseStored(row.body).reasoningRequired);}
   observeAttention(event) {return this.transaction(()=>{
     const task=this.get(event.taskId);if(TERMINAL.has(task.status))return {created:false,reason:'terminal'};
     const id=require('node:crypto').createHash('sha256').update(canonical([event.taskId,event.source,event.sourceId,event.revision,event.kind])).digest('hex');
@@ -232,7 +232,7 @@ class NethraStore {
     const result=this.save(task,'CONFIGURED',patch);
     this.db.prepare('INSERT INTO requests VALUES(?,?,?)').run(requestId,binding,JSON.stringify(result));return result;
   });}
-  settings() {const r=this.db.prepare('SELECT body FROM settings WHERE singleton=1').get();const value={enabled:true,thinking:true,verbose:false,persistentStartup:true,minWakeMs:300000,maxWakeMs:604800000,globalDailyBudgetMs:3600000,objectiveDailyBudgetMs:1200000,...SETTING_DEFAULTS,...(r?JSON.parse(r.body):{}),thinking:true};return {...value,quietHours:{...SETTING_DEFAULTS.quietHours,...(value.quietHours||{})},globalDailyMs:value.globalDailyBudgetMs,objectiveDailyMs:value.objectiveDailyBudgetMs};}
+  settings() {const r=this.db.prepare('SELECT body FROM settings WHERE singleton=1').get();const value={enabled:true,thinking:true,verbose:false,persistentStartup:true,minWakeMs:300000,maxWakeMs:604800000,globalDailyBudgetMs:3600000,objectiveDailyBudgetMs:1200000,...SETTING_DEFAULTS,...(r?require("./brand-compatibility").parseStored(r.body):{}),thinking:true};return {...value,quietHours:{...SETTING_DEFAULTS.quietHours,...(value.quietHours||{})},globalDailyMs:value.globalDailyBudgetMs,objectiveDailyMs:value.objectiveDailyBudgetMs};}
   setSettings(patch,{restore=false}={}) {
     const stopped=[];
     const settings=this.transaction(()=>{const allowed=['enabled','thinking','verbose','persistentStartup','minWakeMs','maxWakeMs','globalDailyBudgetMs','objectiveDailyBudgetMs','globalDailyMs','objectiveDailyMs','warmOnStartup','idleRetention','quietHours','proactiveUpdates','advisorReservePercent','notificationDeviceId','voiceInvitations','childDelegation','taskAgentsEnabled','projectNotifications',...(restore?['notificationDeviceSince']:[])];if(Object.keys(patch).some(k=>!allowed.includes(k)))throw new Error('Unknown Nethra setting');if(patch.thinking===false)throw new Error('Qwen3 30B always uses thinking');const value={...this.settings(),...patch};if(Object.hasOwn(patch,'globalDailyMs'))value.globalDailyBudgetMs=patch.globalDailyMs;if(Object.hasOwn(patch,'objectiveDailyMs'))value.objectiveDailyBudgetMs=patch.objectiveDailyMs;for(const key of ['globalDailyBudgetMs','objectiveDailyBudgetMs'])if(value[key]!==null&&(!Number.isFinite(value[key])||value[key]<0))throw new Error('Invalid budget');if(!Number.isFinite(value.minWakeMs)||value.minWakeMs<300000||!Number.isFinite(value.maxWakeMs)||value.maxWakeMs>604800000||value.maxWakeMs<value.minWakeMs)throw new Error('Invalid wake bounds');for(const key of ['enabled','thinking','verbose','persistentStartup','voiceInvitations','childDelegation','taskAgentsEnabled'])if(typeof value[key]!=='boolean')throw new Error('Invalid boolean setting');
@@ -252,7 +252,7 @@ class NethraStore {
     if(patch.childDelegation===false){
       const rows=this.db.prepare("SELECT body FROM children WHERE json_extract(body,'$.status')='ACTIVE'").all();
       for(const row of rows){
-        const child=JSON.parse(row.body);
+        const child=require("./brand-compatibility").parseStored(row.body);
         this.terminateChildInside(child,'STOPPED','Stopped by the owner: child delegation disabled');
         stopped.push(child.id);
       }
@@ -274,7 +274,7 @@ class NethraStore {
   /** Journals that older tool results were dropped to fit the window, so it is visible, not silent. */
   recordContextCompaction(id,{compacted,removedExchanges=0,estimatedTokens,budget}) {this.db.prepare('INSERT INTO events(taskId,at,kind,detail) VALUES(?,?,?,?)').run(id,this.now(),'CONTEXT_COMPACTED',JSON.stringify({compacted,removedExchanges,estimatedTokens,budget}));}
   recordContextMeasurement(id,{estimatedTokens,actualTokens,budget}) {this.get(id);if(![estimatedTokens,actualTokens,budget].every(value=>Number.isSafeInteger(value)&&value>=0))throw new Error('Invalid context measurement');this.db.prepare('INSERT INTO events(taskId,at,kind,detail) VALUES(?,?,?,?)').run(id,this.now(),'CONTEXT_MEASURED',JSON.stringify({estimatedTokens,actualTokens,budget}));}
-  advisorSnapshot(provider) {const row=this.db.prepare('SELECT body FROM advisor_limits WHERE provider=?').get(provider);return row?JSON.parse(row.body):null;}
+  advisorSnapshot(provider) {const row=this.db.prepare('SELECT body FROM advisor_limits WHERE provider=?').get(provider);return row?require("./brand-compatibility").parseStored(row.body):null;}
   recordAdvisorSnapshot(provider,body) {this.db.prepare('INSERT INTO advisor_limits VALUES(?,?) ON CONFLICT(provider) DO UPDATE SET body=excluded.body').run(provider,JSON.stringify(body));}
   recordHostStart() {return this.transaction(()=>{
     const now=this.now();
@@ -297,8 +297,8 @@ class NethraStore {
       ) ORDER BY e.seq`).all(since,since);
   }
   hostStartsAfter(at) {return this.db.prepare('SELECT at FROM host_starts WHERE at>? ORDER BY at LIMIT 10').all(at).map(row=>row.at);}
-  experiments(taskId) {return this.db.prepare('SELECT body FROM experiments WHERE taskId=? ORDER BY rowid DESC').all(taskId).map(row=>JSON.parse(row.body));}
-  experiment(taskId,id) {const row=this.db.prepare('SELECT body FROM experiments WHERE id=? AND taskId=?').get(id,taskId);if(!row)throw new Error('Unknown experiment for this objective');return JSON.parse(row.body);}
+  experiments(taskId) {return this.db.prepare('SELECT body FROM experiments WHERE taskId=? ORDER BY rowid DESC').all(taskId).map(row=>require("./brand-compatibility").parseStored(row.body));}
+  experiment(taskId,id) {const row=this.db.prepare('SELECT body FROM experiments WHERE id=? AND taskId=?').get(id,taskId);if(!row)throw new Error('Unknown experiment for this objective');return require("./brand-compatibility").parseStored(row.body);}
   createExperiment(taskId,input,token) {return this.transaction(()=>{
     this.assertRunnable(taskId,token);
     const all=this.experiments(taskId);
@@ -635,7 +635,7 @@ class NethraStore {
    * Deletes an objective and its journal, approvals, attention, receipts and workspace drafts.
    * A running step is fenced first. The linked chat is kept as an ordinary conversation.
    */
-  deletion(id) {const row=this.db.prepare('SELECT body FROM task_deletions WHERE id=?').get(id);return row?JSON.parse(row.body):null;}
+  deletion(id) {const row=this.db.prepare('SELECT body FROM task_deletions WHERE id=?').get(id);return row?require("./brand-compatibility").parseStored(row.body):null;}
   assertNotDeleted(id) {if(id&&this.deletion(id)){const error=new Error('Unknown Nethra task: deleted');error.code='NETHRA_TASK_DELETED';throw error;}}
   editReceipt(requestId,id,changes,revision,instruction,execution) {
     const row=this.db.prepare('SELECT * FROM requests WHERE id=?').get(requestId);if(!row)return null;
@@ -653,11 +653,11 @@ class NethraStore {
     return result;
   });}
   replay(row) {
-    const body=JSON.parse(row.body),binding=row.binding?JSON.parse(row.binding):{};
+    const body=require("./brand-compatibility").parseStored(row.body),binding=row.binding?JSON.parse(row.binding):{};
     if(binding.kind!=='remove')this.assertNotDeleted(body.task?.id||body.taskId||body.id||binding.id);
     return body;
   }
-  pendingDeletions() {return this.db.prepare('SELECT body FROM task_deletions').all().map(row=>JSON.parse(row.body)).filter(item=>item.cleanup.workspace!=='DONE'||item.cleanup.related!=='DONE');}
+  pendingDeletions() {return this.db.prepare('SELECT body FROM task_deletions').all().map(row=>require("./brand-compatibility").parseStored(row.body)).filter(item=>item.cleanup.workspace!=='DONE'||item.cleanup.related!=='DONE');}
   saveDeletion(record) {this.db.prepare('UPDATE task_deletions SET body=? WHERE id=?').run(JSON.stringify(record),record.id);return record;}
   deletionResult(id) {const {workspace,deletedAt,...result}=this.deletion(id);return result;}
   finishDeletionEffects(id,error=null) {
@@ -695,7 +695,7 @@ class NethraStore {
       this.db.prepare('INSERT INTO task_deletions VALUES(?,?)').run(id,JSON.stringify({...body,deletedAt:this.now(),workspace:task.workspace,cleanup:{workspace:'PENDING',related:'PENDING',error:null}}));
       this.db.prepare('DELETE FROM attention WHERE taskId=?').run(id);
       this.db.prepare('DELETE FROM approvals WHERE taskId=?').run(id);
-      for(const row of this.db.prepare('SELECT actionKey,body FROM actions').all())if(JSON.parse(row.body).taskId===id)this.db.prepare('DELETE FROM actions WHERE actionKey=?').run(row.actionKey);
+      for(const row of this.db.prepare('SELECT actionKey,body FROM actions').all())if(require("./brand-compatibility").parseStored(row.body).taskId===id)this.db.prepare('DELETE FROM actions WHERE actionKey=?').run(row.actionKey);
       this.db.prepare('DELETE FROM children WHERE parentId=?').run(id);
       this.db.prepare('DELETE FROM experiments WHERE taskId=?').run(id);
       this.db.prepare('DELETE FROM model_jobs WHERE taskId=?').run(id);
@@ -758,8 +758,8 @@ class NethraStore {
     this.db.prepare('INSERT INTO approvals VALUES(?,?,?,?,?)').run(approval.id,taskId,key,binding,JSON.stringify(approval));task.requiredApprovals.push(approval.id);task.status='WAITING_FOR_USER';task.nextWakeAt=null;this.save(task,'APPROVAL_REQUESTED',{approvalId:approval.id});return approval;
   }
 
-  approvals(taskId) {return this.db.prepare('SELECT body FROM approvals WHERE taskId=? ORDER BY rowid').all(taskId).map(r=>JSON.parse(r.body));}
-  approval(id) {const row=this.db.prepare('SELECT body FROM approvals WHERE id=?').get(id);if(!row)throw new Error('Unknown approval');return JSON.parse(row.body);}
+  approvals(taskId) {return this.db.prepare('SELECT body FROM approvals WHERE taskId=? ORDER BY rowid').all(taskId).map(r=>require("./brand-compatibility").parseStored(r.body));}
+  approval(id) {const row=this.db.prepare('SELECT body FROM approvals WHERE id=?').get(id);if(!row)throw new Error('Unknown approval');return require("./brand-compatibility").parseStored(row.body);}
   saveApproval(a) {this.db.prepare('UPDATE approvals SET body=? WHERE id=?').run(JSON.stringify(a),a.id);return a;}
   decideApproval(id,approved,requestId) {return this.transaction(()=>{
     if(!requestId)throw new Error('A request ID is required');const binding=canonical({id,approved}),old=this.db.prepare('SELECT * FROM requests WHERE id=?').get(requestId);
@@ -798,8 +798,8 @@ class NethraStore {
     const receipt={key,taskId,tool,args,status:'RESERVED',result:null,createdAt:this.now()};this.db.prepare('INSERT INTO actions VALUES(?,?,?)').run(key,binding,JSON.stringify(receipt));return receipt;
   }
   reserveAction(taskId,key,tool,args,token) {return this.transaction(()=>this.reserveActionInside(taskId,key,tool,args,token));}
-  getAction(key) {const row=this.db.prepare('SELECT body FROM actions WHERE actionKey=?').get(key);return row?JSON.parse(row.body):null;}
-  actions(taskId) {return this.db.prepare('SELECT body FROM actions').all().map(row=>JSON.parse(row.body)).filter(action=>action.taskId===taskId);}
+  getAction(key) {const row=this.db.prepare('SELECT body FROM actions WHERE actionKey=?').get(key);return row?require("./brand-compatibility").parseStored(row.body):null;}
+  actions(taskId) {return this.db.prepare('SELECT body FROM actions').all().map(row=>require("./brand-compatibility").parseStored(row.body)).filter(action=>action.taskId===taskId);}
   finishAction(key,result,token) {return this.transaction(()=>{
     const receipt=this.getAction(key);
     if(!receipt)throw new Error('Unknown action');
@@ -811,18 +811,18 @@ class NethraStore {
       .run(receipt.taskId,receipt.finishedAt,'ACTION_RECONCILED',JSON.stringify({key,path:result.path,sha256:result.sha256}));
     return receipt;
   });}
-  children(parentId) {return this.db.prepare('SELECT body FROM children WHERE parentId=? ORDER BY rowid').all(parentId).map(row=>JSON.parse(row.body));}
+  children(parentId) {return this.db.prepare('SELECT body FROM children WHERE parentId=? ORDER BY rowid').all(parentId).map(row=>require("./brand-compatibility").parseStored(row.body));}
   recentAgents(parentId) {
     return this.db.prepare(`SELECT body FROM tasks WHERE json_extract(body,'$.parentId')=?
-      ORDER BY json_extract(body,'$.status') IN ('COMPLETED','CANCELLED','FAILED'), rowid DESC LIMIT 8`).all(parentId).map(row=>JSON.parse(row.body));
+      ORDER BY json_extract(body,'$.status') IN ('COMPLETED','CANCELLED','FAILED'), rowid DESC LIMIT 8`).all(parentId).map(row=>require("./brand-compatibility").parseStored(row.body));
   }
   recentChildren(parentId,limit=8) {
-    return this.db.prepare('SELECT body FROM children WHERE parentId=? ORDER BY rowid DESC LIMIT ?').all(parentId,limit).map(row=>JSON.parse(row.body));
+    return this.db.prepare('SELECT body FROM children WHERE parentId=? ORDER BY rowid DESC LIMIT ?').all(parentId,limit).map(row=>require("./brand-compatibility").parseStored(row.body));
   }
   child(id) {
     const row=this.db.prepare('SELECT body FROM children WHERE id=?').get(id);
     if(!row)throw new Error('Unknown child');
-    return JSON.parse(row.body);
+    return require("./brand-compatibility").parseStored(row.body);
   }
   assertChildActive(id,token) {
     const child=this.child(id);
@@ -848,7 +848,7 @@ class NethraStore {
   interruptChildrenInside(parentId,token) {
     const active=this.db.prepare("SELECT body FROM children WHERE parentId=? AND json_extract(body,'$.status')='ACTIVE' AND json_extract(body,'$.leaseToken')=?").all(parentId,token);
     for(const row of active){
-      this.terminateChildInside(JSON.parse(row.body),'INTERRUPTED','Parent work pass ended');
+      this.terminateChildInside(require("./brand-compatibility").parseStored(row.body),'INTERRUPTED','Parent work pass ended');
     }
   }
   stopChild(parentId,id,requestId) {
@@ -878,11 +878,11 @@ class NethraStore {
     if(typeof scope!=='string'||!scope.trim()||scope.length>1500||typeof runId!=='string'||!runId)throw Error('Invalid child scope');
     const active=this.db.prepare("SELECT body FROM children WHERE parentId=? AND json_extract(body,'$.status')='ACTIVE'").all(parentId);
     for(const row of active){
-      const previous=JSON.parse(row.body);
+      const previous=require("./brand-compatibility").parseStored(row.body);
       if(previous.leaseToken===token)throw Error('Child work must be sequential');
       this.terminateChildInside(previous,'INTERRUPTED','Parent work pass ended');
     }
-    const prior=this.db.prepare("SELECT body FROM children WHERE parentId=? AND json_extract(body,'$.runId')=? LIMIT 2").all(parentId,runId).map(row=>JSON.parse(row.body));
+    const prior=this.db.prepare("SELECT body FROM children WHERE parentId=? AND json_extract(body,'$.runId')=? LIMIT 2").all(parentId,runId).map(row=>require("./brand-compatibility").parseStored(row.body));
     if(prior.some(child=>child.status==='STOPPED'&&child.scope.trim()===scope.trim()))throw Error('The owner stopped this child scope in this work pass');
     if(prior.length>=2)throw Error('Child delegation budget exhausted');
     const child={id:randomUUID(),parentId,runId,scope,model:this.get(parentId).model,status:'ACTIVE',allowedTools:['web_search','read_file','list_directory'],maxIterations:4,maxToolCalls:2,depth:1,startedAt:this.now(),result:null,leaseToken:token};
@@ -892,7 +892,7 @@ class NethraStore {
   });}
   finishChild(id,result,token) {return this.transaction(()=>{
     const row=this.db.prepare('SELECT body FROM children WHERE id=?').get(id);if(!row)throw Error('Unknown child');
-    const child=JSON.parse(row.body);this.assertRunnable(child.parentId,token);
+    const child=require("./brand-compatibility").parseStored(row.body);this.assertRunnable(child.parentId,token);
     if(child.leaseToken!==token||child.status!=='ACTIVE')throw Error('Child execution is fenced');
     if(!result||typeof result!=='object'||Array.isArray(result)||Object.keys(result).sort().join(',')!=='evidence,report,requiresParentReview'||typeof result.report!=='string'||result.report.length>4000||!Array.isArray(result.evidence)||result.evidence.length>2||result.requiresParentReview!==true)throw Error('Invalid child result schema');
     child.status='COMPLETED';child.result=structuredClone(result);child.finishedAt=this.now();delete child.leaseToken;
@@ -902,7 +902,7 @@ class NethraStore {
   });}
   failChild(id,error,token) {return this.transaction(()=>{
     const row=this.db.prepare('SELECT body FROM children WHERE id=?').get(id);if(!row)throw Error('Unknown child');
-    const child=JSON.parse(row.body);this.assertLease(child.parentId,token);
+    const child=require("./brand-compatibility").parseStored(row.body);this.assertLease(child.parentId,token);
     if(child.leaseToken!==token||child.status!=='ACTIVE')throw Error('Child execution is fenced');
     child.status='FAILED';child.error=String(error?.message||error).slice(0,400);child.finishedAt=this.now();delete child.leaseToken;
     this.db.prepare('UPDATE children SET body=? WHERE id=?').run(JSON.stringify(child),id);

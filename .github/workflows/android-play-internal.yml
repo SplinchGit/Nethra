@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 concurrency:
-  group: junction-play-internal
+  group: nethra-play-internal
   cancel-in-progress: false
 
 permissions:
@@ -19,9 +19,9 @@ jobs:
       JAVA_TOOL_OPTIONS: -Xmx3g
       PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
       RELEASE_KEYSTORE_BASE64: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
-      RELEASE_STORE_PASSWORD: ${{ secrets.JUNCTION_RELEASE_STORE_PASSWORD }}
-      RELEASE_KEY_ALIAS: ${{ secrets.JUNCTION_RELEASE_KEY_ALIAS }}
-      RELEASE_KEY_PASSWORD: ${{ secrets.JUNCTION_RELEASE_KEY_PASSWORD }}
+      RELEASE_STORE_PASSWORD: ${{ (secrets.NETHRA_RELEASE_STORE_PASSWORD || secrets.JUNCTION_RELEASE_STORE_PASSWORD) }}
+      RELEASE_KEY_ALIAS: ${{ (secrets.NETHRA_RELEASE_KEY_ALIAS || secrets.JUNCTION_RELEASE_KEY_ALIAS) }}
+      RELEASE_KEY_PASSWORD: ${{ (secrets.NETHRA_RELEASE_KEY_PASSWORD || secrets.JUNCTION_RELEASE_KEY_PASSWORD) }}
 
     steps:
       - name: Check Play publishing configuration
@@ -58,19 +58,19 @@ jobs:
         if: steps.configured.outputs.ready == 'true'
         shell: bash
         run: |
-          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/junction-upload.jks"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nethra-upload.jks"
           printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/google-play-service-account.json"
-          chmod 600 "$RUNNER_TEMP/junction-upload.jks" "$RUNNER_TEMP/google-play-service-account.json"
+          chmod 600 "$RUNNER_TEMP/nethra-upload.jks" "$RUNNER_TEMP/google-play-service-account.json"
 
       - name: Build signed release bundle
         if: steps.configured.outputs.ready == 'true'
         env:
-          JUNCTION_RELEASE_STORE_FILE: ${{ runner.temp }}/junction-upload.jks
-          JUNCTION_RELEASE_STORE_PASSWORD: ${{ secrets.JUNCTION_RELEASE_STORE_PASSWORD }}
-          JUNCTION_RELEASE_KEY_ALIAS: ${{ secrets.JUNCTION_RELEASE_KEY_ALIAS }}
-          JUNCTION_RELEASE_KEY_PASSWORD: ${{ secrets.JUNCTION_RELEASE_KEY_PASSWORD }}
-          JUNCTION_VERSION_CODE: ${{ github.run_number }}
-          JUNCTION_BUILD_NUMBER: ${{ github.run_number }}
+          NETHRA_RELEASE_STORE_FILE: ${{ runner.temp }}/nethra-upload.jks
+          NETHRA_RELEASE_STORE_PASSWORD: ${{ (secrets.NETHRA_RELEASE_STORE_PASSWORD || secrets.JUNCTION_RELEASE_STORE_PASSWORD) }}
+          NETHRA_RELEASE_KEY_ALIAS: ${{ (secrets.NETHRA_RELEASE_KEY_ALIAS || secrets.JUNCTION_RELEASE_KEY_ALIAS) }}
+          NETHRA_RELEASE_KEY_PASSWORD: ${{ (secrets.NETHRA_RELEASE_KEY_PASSWORD || secrets.JUNCTION_RELEASE_KEY_PASSWORD) }}
+          NETHRA_VERSION_CODE: ${{ github.run_number }}
+          NETHRA_BUILD_NUMBER: ${{ github.run_number }}
         run: ./gradlew :app:bundleRelease --no-daemon
 
       - name: Upload to Play internal track
@@ -78,7 +78,7 @@ jobs:
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: ${{ runner.temp }}/google-play-service-account.json
-          packageName: com.splinch.junction
+          packageName: com.splinch.junction # Stable Play Store application identity.
           releaseFiles: apps/android/build/outputs/bundle/release/app-release.aab
           tracks: internal
           status: completed
@@ -87,7 +87,7 @@ jobs:
         if: steps.configured.outputs.ready == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: junction-play-release
+          name: nethra-play-release
           path: apps/android/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14

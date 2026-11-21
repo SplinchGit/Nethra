@@ -4,7 +4,7 @@ This is the current migration record. Earlier `NETHRA_DELIVERY.md` sections desc
 
 ## Current behavior
 
-- Windows and Android local-provider catalogs select `qwen3:30b` only. Previously saved `qwen3:14b` selections normalize to 30B. The objective runner, bounded child records, desktop chat, paired-phone requests and Junction World use the same local tag.
+- Windows and Android local-provider catalogs select `qwen3:30b` only. Previously saved `qwen3:14b` selections normalize to 30B. The objective runner, bounded child records, desktop chat, paired-phone requests and Nethra World use the same local tag.
 - The installed tag is Qwen3 30.5B MoE Q4_K_M, with native tools and thinking. Its 2507 thinking variant emitted raw reasoning in `content` when sent `think:false`; all local 30B calls now send `think:true`, which separates reasoning from the visible answer. Thinking is shown as always on, rather than offering a false off switch.
 - PC primary navigation is Chat and Audit. More contains Objectives, Feed, Work Activity, Context & devices and Settings. Chat has an active-objective count, and its `+` menu can carry typed text into a persistent objective. The composer is wider and grows to 240 px for multiline drafting.
 - Android keeps Chat and Audit as bottom tabs. The chat menu can carry a typed draft into the objectives form; the form retains the persistent-execution choice and displays the 30B thinking constraint.
@@ -29,7 +29,7 @@ This is the current migration record. Earlier `NETHRA_DELIVERY.md` sections desc
 
 ## Setup and limits
 
-Use the Nethra desktop shortcut and keep Ollama running. The executable remains `Junction.exe` at the stable package path to preserve existing Windows startup and firewall bindings. The local Ollama API remains loopback-only; paired phones connect to Junction's authenticated API. The PC must be awake and the owner signed in for scheduled execution. Open Chat > `+` > **Continue as objective** on Windows, or Chat menu > **Continue draft as objective** on Android; review progress via the chat count or Objectives screen.
+Use the Nethra desktop shortcut and keep Ollama running. The executable remains `Nethra.exe` at the stable package path to preserve existing Windows startup and firewall bindings. The local Ollama API remains loopback-only; paired phones connect to Nethra's authenticated API. The PC must be awake and the owner signed in for scheduled execution. Open Chat > `+` > **Continue as objective** on Windows, or Chat menu > **Continue draft as objective** on Android; review progress via the chat count or Objectives screen.
 
 The APK was built but not installed because `adb devices` listed no phone. No Android 100152 smoke or live phone-to-30B round trip is claimed. Wireless debugging was not opened on the untrusted hostel network; the PC Tailscale client is currently logged out and unable to reach its coordination server. When the phone is available, install with `adb install -r apps/android/build/outputs/apk/debug/app-debug.apk` and smoke launch, local-model selection, objective draft handoff and a host result. Earlier physical phone tests were with 14B and an older APK.
 

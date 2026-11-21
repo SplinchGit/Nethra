@@ -3,6 +3,10 @@ const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const {detectSearchRequirement} = require('../src/intent-router');
 const {LocalAgentRuntime} = require('../src/local-agent-runtime');
+test('wallet capabilities describe the owner approval boundary',()=>{
+ const text=require('../src/self-capabilities').capabilityAnswer(['wallet_status','wallet_receive','wallet_request_payment']);
+ assert.match(text,/Electrum/);assert.match(text,/approval/i);assert.match(text,/keys.*Electrum/i);
+});
 
 test('own scheduling and tool questions are not public research', () => {
   for (const question of ["So what do you know about your agentic mode or tools? You can schedule work yes?", 'Can you schedule work?', 'What tools do you have?', 'Do you have web search?']) {

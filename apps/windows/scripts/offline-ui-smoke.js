@@ -6,11 +6,11 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const assert = require("node:assert/strict");
-const directory = fs.mkdtempSync(path.join(os.tmpdir(), "junction-offline-ui-"));
+const directory = fs.mkdtempSync(path.join(os.tmpdir(), "nethra-offline-ui-"));
 app.setPath("userData", directory);
 global.fetch = async () => { throw new Error("OFFLINE_UI_TEST_NETWORK_DISABLED"); };
 // Background transports have their own suites; never connect this test instance
-// to James's phone/VM or advertise another Junction on his network.
+// to James's phone/VM or advertise another Nethra on his network.
 require("../src/world-host-relay").WorldHostRelay.prototype.start = function () {};
 require("../src/lan-relay-lifecycle").LanRelayLifecycle.prototype.start = async function () {
   throw new Error("OFFLINE_UI_TEST_LAN_DISABLED");
@@ -34,32 +34,32 @@ app.on("browser-window-created", (_event, window) => {
           if (active?.id !== 'view-' + button.dataset.view) throw new Error('Navigation failed: ' + button.dataset.view);
           views.push(button.dataset.view);
         }
-        const chat = await window.junction.newConversation();
-        await window.junction.renameConversation({id:chat.id,title:'Offline smoke fixture'});
-        const history = await window.junction.conversations();
-        await window.junction.addMemory({category:'test',content:'Offline fixture fact'});
-        const memory = await window.junction.memories();
-        await window.junction.deleteMemory(memory.find(item=>item.content==='Offline fixture fact').id);
-        const removed = !(await window.junction.memories()).some(item=>item.content==='Offline fixture fact');
-        await window.junction.deleteConversation(chat.id);
+        const chat = await window.nethra.newConversation();
+        await window.nethra.renameConversation({id:chat.id,title:'Offline smoke fixture'});
+        const history = await window.nethra.conversations();
+        await window.nethra.addMemory({category:'test',content:'Offline fixture fact'});
+        const memory = await window.nethra.memories();
+        await window.nethra.deleteMemory(memory.find(item=>item.content==='Offline fixture fact').id);
+        const removed = !(await window.nethra.memories()).some(item=>item.content==='Offline fixture fact');
+        await window.nethra.deleteConversation(chat.id);
         showView('chat');document.getElementById('objective-status').click();
         const goal=document.querySelector('#nethra-task-drawer textarea[aria-label="Objective"]');
         goal.closest('details').open=true;goal.value='Offline Nethra objective';goal.form.requestSubmit();
         let objective;
         for(let attempt=0;attempt<100&&!objective;attempt++){
-          objective=(await window.junction.nethra('nethra.list')).objectives.find(t=>t.goal==='Offline Nethra objective');
+          objective=(await window.nethra.nethra('nethra.list')).objectives.find(t=>t.goal==='Offline Nethra objective');
           if(!objective)await new Promise(resolve=>setTimeout(resolve,10));
         }
         if(!objective)throw new Error('Nethra form did not create its objective');
-        const link=await window.junction.nethra('nethra.openChat',{id:objective.id});
+        const link=await window.nethra.nethra('nethra.openChat',{id:objective.id});
         await openConversation(link.conversationId);
         for(let attempt=0;attempt<100&&!document.getElementById('nethra-chat-strip')?.textContent.includes('Offline Nethra objective');attempt++)await new Promise(resolve=>setTimeout(resolve,20));
         const linkedStrip=document.getElementById('nethra-chat-strip')?.textContent.includes('Offline Nethra objective');
-        objective=(await window.junction.nethra('nethra.get',{id:objective.id})).task;
-        const paused=await window.junction.nethra('nethra.control',{id:objective.id,action:'pause',revision:objective.revision});
-        const resumed=await window.junction.nethra('nethra.control',{id:objective.id,action:'resume',revision:paused.task.revision});
-        const cancelled=await window.junction.nethra('nethra.control',{id:objective.id,action:'cancel',revision:resumed.task.revision});
-        const detail=await window.junction.nethra('nethra.get',{id:objective.id});
+        objective=(await window.nethra.nethra('nethra.get',{id:objective.id})).task;
+        const paused=await window.nethra.nethra('nethra.control',{id:objective.id,action:'pause',revision:objective.revision});
+        const resumed=await window.nethra.nethra('nethra.control',{id:objective.id,action:'resume',revision:paused.task.revision});
+        const cancelled=await window.nethra.nethra('nethra.control',{id:objective.id,action:'cancel',revision:resumed.task.revision});
+        const detail=await window.nethra.nethra('nethra.get',{id:objective.id});
         const nethra=paused.task.status==='PAUSED'&&resumed.task.status==='ACTIVE'&&cancelled.task.status==='CANCELLED'&&detail.task.status==='CANCELLED'&&detail.events.some(e=>e.kind==='CANCEL');
         document.getElementById('objective-status').click();
         document.getElementById('objective-status').click();
@@ -82,7 +82,7 @@ app.on("browser-window-created", (_event, window) => {
         const sidebarThreads=conversationList?.parentElement===document.querySelector('.shell>aside');
         showView('chat');const fullWidth=Math.abs(document.querySelector('.conversation').getBoundingClientRect().left-document.querySelector('main').getBoundingClientRect().left)<2;
         showView('audit');const threadsHiddenAway=getComputedStyle(conversationList).display==='none';showView('chat');
-        return {views,created:history.some(item=>item.id===chat.id),removed,nethra,completedVisible,linkedStrip,workControls,collapsed,expanded,primaryNavigation,standaloneObjectiveScreen,objectiveStatus,objectivePrefill,thinkingFixed,sidebarThreads,fullWidth,threadsHiddenAway,extracted:!document.getElementById('open-mafioso'),hasPreload:typeof window.junction.audit==='function'};
+        return {views,created:history.some(item=>item.id===chat.id),removed,nethra,completedVisible,linkedStrip,workControls,collapsed,expanded,primaryNavigation,standaloneObjectiveScreen,objectiveStatus,objectivePrefill,thinkingFixed,sidebarThreads,fullWidth,threadsHiddenAway,extracted:!document.getElementById('open-mafioso'),hasPreload:typeof window.nethra.audit==='function'};
       })()`);
       assert.deepEqual(result.views, ["chat", "tasks", "audit", "feed", "projects", "context", "settings"]);
       assert.deepEqual(result.primaryNavigation,["chat","tasks"]);
@@ -108,7 +108,7 @@ app.on("browser-window-created", (_event, window) => {
       })()`);
       assert.equal(answerPersists,true,'owner answer survives background refresh');
       await window.webContents.executeJavaScript(`(async()=>{
-        await window.junction.nethra('nethra.create',{goal:'Review local research tomorrow',persistent:true});
+        await window.nethra.nethra('nethra.create',{goal:'Review local research tomorrow',persistent:true});
         if(document.getElementById('nethra-task-drawer').classList.contains('open'))document.getElementById('objective-status').click();
         document.getElementById('objective-status').click();
         for(let attempt=0;attempt<100;attempt++){

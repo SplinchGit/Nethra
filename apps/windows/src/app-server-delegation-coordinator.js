@@ -40,7 +40,7 @@ class AppServerDelegationCoordinator extends DelegationCoordinator {
       if (project.status === "running" || project.status === "queued" || project.status === WAITING) {
         project.status = "needs_decision";
         project.resumeAt = null;
-        project.decisionRequest = "Junction reopened. Resume this saved task explicitly?";
+        project.decisionRequest = "Nethra reopened. Resume this saved task explicitly?";
         project.summary = "Paused after reopening; waiting for an explicit owner decision";
       }
     }
@@ -98,7 +98,7 @@ class AppServerDelegationCoordinator extends DelegationCoordinator {
     if(this.closed || signal.aborted || project.status === "cancelled") return;
     const slug = project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project";
     const run = plan.id.slice(0, 8);
-    project.branch = project.branch || `junction/delegation/${run}/${slug}`;
+    project.branch = project.branch || `nethra/delegation/${run}/${slug}`;
     project.worktree = project.worktree || path.join(this.directory, "worktrees", run, slug);
     if (!fs.existsSync(project.worktree)) {
       fs.mkdirSync(path.dirname(project.worktree), { recursive: true });
@@ -114,7 +114,7 @@ class AppServerDelegationCoordinator extends DelegationCoordinator {
       `Work only on ${project.name} in this isolated worktree.`,
       "Do not merge, push, modify another repository, access credentials, or request broad machine access.",
       "Implement the assigned work, run relevant tests, and commit all changes to the current delegation branch.",
-      "If a product decision is required, end with exactly: JUNCTION_DECISION_REQUIRED: <concise question>.",
+      "If a product decision is required, end with exactly: NETHRA_DECISION_REQUIRED: <concise question>.",
       `Shared owner instruction: ${plan.instruction}`,
       decision ? `Owner decision: ${decision}` : ""
     ].filter(Boolean).join("\n\n");
@@ -129,7 +129,7 @@ class AppServerDelegationCoordinator extends DelegationCoordinator {
       });
       project.codexThreadId = result.threadId;
       project.codexTurnId = result.turnId;
-      const decisionMatch = (result.text || project.lastOutput || "").match(/JUNCTION_DECISION_REQUIRED:\s*(.+)/i);
+      const decisionMatch = (result.text || project.lastOutput || "").match(/NETHRA_DECISION_REQUIRED:\s*(.+)/i);
       if (decisionMatch) { project.status = "needs_decision"; project.decisionRequest = decisionMatch[1].trim(); }
       else if(!this.closed && project.status !== "cancelled") await this.verify(project);
     } catch (error) {
@@ -139,11 +139,11 @@ class AppServerDelegationCoordinator extends DelegationCoordinator {
         try {
           if (!await this.waitForConfirmedCapacity(plan, project)) {
             project.status = "failed";
-            project.summary = "Codex reported a capacity problem, but Junction could not read a confirmed reset time. The task state is preserved; retry it after checking Codex usage.";
+            project.summary = "Codex reported a capacity problem, but Nethra could not read a confirmed reset time. The task state is preserved; retry it after checking Codex usage.";
           }
         } catch (rateLimitError) {
           project.status = "failed";
-          project.summary = "Codex reported a capacity problem, but Junction could not read its usage windows. The task state is preserved; retry it after checking Codex usage.";
+          project.summary = "Codex reported a capacity problem, but Nethra could not read its usage windows. The task state is preserved; retry it after checking Codex usage.";
         }
       } else {
         project.status = "failed";
@@ -167,7 +167,7 @@ class AppServerDelegationCoordinator extends DelegationCoordinator {
     for(const run of this.activeRuns.values())run.controller.abort();
     for(const timer of this.resumeTimers.values())clearTimeout(timer);
     this.resumeTimers.clear();
-    for(const plan of this.plans)for(const project of plan.projects)if(["running","queued",WAITING].includes(project.status)){project.status="needs_decision";project.decisionRequest="Resume saved work explicitly?";project.summary="Paused when Junction quit";}
+    for(const plan of this.plans)for(const project of plan.projects)if(["running","queued",WAITING].includes(project.status)){project.status="needs_decision";project.decisionRequest="Resume saved work explicitly?";project.summary="Paused when Nethra quit";}
     this.save();await this.appServer.stop();await Promise.allSettled([...this.activeRuns.values()].map(r=>r.promise));
   }
 }

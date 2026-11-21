@@ -31,7 +31,7 @@ function selectPrivateIPv4(bindAddress) {
   return candidates.find(TAILSCALE_IPV4) || candidates[0] || (() => { throw new Error("No private IPv4 LAN interface is available."); })();
 }
 // Listen on each private interface so an already paired phone can reconnect
-// when Windows switches between a hotspot and an overlay. The Junction API
+// when Windows switches between a hotspot and an overlay. The Nethra API
 // authenticates each device and pins TLS; Ollama itself remains loopback-only.
 function preferredBindAddresses() {
   return privateIPv4Addresses();
@@ -54,14 +54,14 @@ function pairedPublicKeyFingerprint(value) {
     : value;
   return crypto.createHash("sha256").update(key.export({ type: "spki", format: "der" })).digest("hex");
 }
-function authMessage(nonce, instanceId, deviceId) { return `junction-lan-v1\n${nonce}\n${instanceId}\n${deviceId}`; }
+function authMessage(nonce, instanceId, deviceId) { return `nethra-lan-v1\n${nonce}\n${instanceId}\n${deviceId}`; }
 function redactedError(error) { return String(error?.message || error || "LAN request failed").replace(/[\r\n]/g, " ").slice(0, 500); }
-function createTlsIdentity(identityStore, advertisedHost = "junction.local", advertisedAddress = null) {
+function createTlsIdentity(identityStore, advertisedHost = "nethra.local", advertisedAddress = null) {
   const existing = identityStore.getTlsIdentity?.(); if (existing?.key && existing?.certificate) return existing;
   try {
     const altNames = [{ type: 2, value: `${String(advertisedHost).replace(/\.local$/i, "")}.local` }];
     if (advertisedAddress && PRIVATE_IPV4(advertisedAddress)) altNames.push({ type: 7, ip: advertisedAddress });
-    const generated = selfsigned.generate([{ name: "commonName", value: "Junction LAN" }], { keySize: 2048, days: 3650, algorithm: "sha256", extensions: [{ name: "basicConstraints", cA: true }, { name: "keyUsage", keyCertSign: true, digitalSignature: true, keyEncipherment: true }, { name: "subjectAltName", altNames }] });
+    const generated = selfsigned.generate([{ name: "commonName", value: "Nethra LAN" }], { keySize: 2048, days: 3650, algorithm: "sha256", extensions: [{ name: "basicConstraints", cA: true }, { name: "keyUsage", keyCertSign: true, digitalSignature: true, keyEncipherment: true }, { name: "subjectAltName", altNames }] });
     const value = { key: generated.private, certificate: generated.cert };
     identityStore.setTlsIdentity(value.key, value.certificate); return value;
   } catch (error) { throw new Error(`Unable to create the local LAN TLS identity: ${redactedError(error)}`); }
@@ -132,10 +132,10 @@ class LanServer {
   worldControl(socket, envelope) {
     const payload = envelope.payload || {};
     try {
-      if (!this.worldControlStore) throw new Error("Junction World controls are unavailable.");
-      if (Object.keys(payload).length !== 2 || !Object.prototype.hasOwnProperty.call(payload, "paused") || !Object.prototype.hasOwnProperty.call(payload, "heartbeatMinutes")) throw new Error("Invalid Junction World control request.");
+      if (!this.worldControlStore) throw new Error("Nethra World controls are unavailable.");
+      if (Object.keys(payload).length !== 2 || !Object.prototype.hasOwnProperty.call(payload, "paused") || !Object.prototype.hasOwnProperty.call(payload, "heartbeatMinutes")) throw new Error("Invalid Nethra World control request.");
     } catch (error) {
-      this.worldAuditStore?.append?.({ id: crypto.randomUUID(), occurredAt: new Date(this.now()).toISOString(), category: "SECURITY_DENIAL", summary: "Rejected an invalid Junction World control request.", details: redactedError(error), actionStatus: "BLOCKED" });
+      this.worldAuditStore?.append?.({ id: crypto.randomUUID(), occurredAt: new Date(this.now()).toISOString(), category: "SECURITY_DENIAL", summary: "Rejected an invalid Nethra World control request.", details: redactedError(error), actionStatus: "BLOCKED" });
       throw error;
     }
     const state = this.worldControlStore.set(payload);
@@ -145,8 +145,8 @@ class LanServer {
   worldMessage(socket, envelope, state) {
     const payload = envelope.payload || {};
     if (!this.worldChatStore || Object.keys(payload).some(key => !["content", "conversationId", "messageId"].includes(key)) || typeof payload.content !== "string" || payload.content.length > 2_800 || typeof payload.conversationId !== "string" || typeof payload.messageId !== "string") {
-      this.worldAuditStore?.append?.({ id: crypto.randomUUID(), occurredAt: new Date(this.now()).toISOString(), category: "SECURITY_DENIAL", summary: "Rejected an invalid Android Junction World message.", actionStatus: "BLOCKED" });
-      throw new Error("Invalid or unavailable Junction World message request.");
+      this.worldAuditStore?.append?.({ id: crypto.randomUUID(), occurredAt: new Date(this.now()).toISOString(), category: "SECURITY_DENIAL", summary: "Rejected an invalid Android Nethra World message.", actionStatus: "BLOCKED" });
+      throw new Error("Invalid or unavailable Nethra World message request.");
     }
     const result = this.worldChatStore.enqueue({ deviceId: state.deviceId, content: payload.content, conversationId: payload.conversationId, messageId: payload.messageId });
     this.onWorldMessage(result);
@@ -197,7 +197,7 @@ class LanServer {
     const nonce = String(payload.nonce || "");
     if (!/^[A-Za-z0-9_-]{32,128}$/.test(nonce) || isRevoked(this.identityStore.getRevocationState?.()[deviceId], this.now())) return this.reject(socket, "Invalid or revoked bootstrap identity.");
     if (!["ed25519", "ec"].includes(key.asymmetricKeyType)) return this.reject(socket, "Unsupported Android signing key.");
-    const message = `junction-lan-bootstrap-v2\n${brainId}\n${deviceId}\n${publicKey}\n${this.certificateFingerprint}\n${this.instanceId}\n${nonce}`;
+    const message = `nethra-lan-bootstrap-v2\n${brainId}\n${deviceId}\n${publicKey}\n${this.certificateFingerprint}\n${this.instanceId}\n${nonce}`;
     const mac = role => crypto.createHmac("sha256", Buffer.from(bootstrap.key, "base64url")).update(`${role}\n${message}`).digest();
     const expected = mac("client");
     let supplied; try { supplied = Buffer.from(proofText, "base64url"); } catch { return this.reject(socket, "Invalid LAN bootstrap proof."); }
@@ -249,14 +249,14 @@ class LanServer {
       let conversation = this.localData?.conversation(payload.conversationId) || this.localData?.createConversation?.(payload.conversationId);
       if (conversation && this.localData?.addMessage) { this.localData.addMessage(conversation.id, "user", String(payload.content || ""), "OWNER"); conversation = this.localData.conversation(conversation.id); }
       const workReply=await this.onOwnerWork?.({content,conversationId:conversation?.id||payload.conversationId,requestId:envelope.requestId,model:normalizeLocalModel(payload.model)});
-      if(workReply){const assistantMessage=conversation&&this.localData?.addMessage?this.localData.addMessage(conversation.id,"assistant",workReply,"JUNCTION"):null;emit("chat.complete",{conversationId:conversation?.id||payload.conversationId||null,messageId:assistantMessage?.id||null,content:workReply,model:"Junction foreman",usage:null});return;}
+      if(workReply){const assistantMessage=conversation&&this.localData?.addMessage?this.localData.addMessage(conversation.id,"assistant",workReply,"NETHRA"):null;emit("chat.complete",{conversationId:conversation?.id||payload.conversationId||null,messageId:assistantMessage?.id||null,content:workReply,model:"Nethra foreman",usage:null});return;}
       if (!this.runtime?.run) throw new Error("LAN model runtime is unavailable.");
       let streamed = "", lastPhase = null;
       const result = await this.runtime.run({ surface:"android-lan", session: payload.session && typeof payload.session === "object" ? payload.session : null, conversationId:conversation?.id||payload.conversationId||null, goal: content, model: normalizeLocalModel(payload.model), forceSearch: payload.forceSearch === true, history: conversation?.messages?.slice(0, -1) || [], memories: this.localData?.memories?.() || [], context: payload.context || null, signal: controller.signal, runId: envelope.requestId, onProgress: progress => { if (!this.authorized(socket)) { controller.abort(); return; } if (progress?.phase && progress.text === undefined && progress.phase !== lastPhase && !controller.signal.aborted) { lastPhase = progress.phase; emit("chat.progress", { phase: progress.phase, stage: String(progress.stage || "").slice(0, 120), coldStart: progress.coldStart === true }); return; } if (progress?.text === undefined) return; const text = String(progress?.text || ""); const delta = text.startsWith(streamed) ? text.slice(streamed.length) : text; streamed = text; if (delta && !controller.signal.aborted) emit("chat.delta", { text: delta }); } });
       if (controller.signal.aborted || !this.authorized(socket)) { controller.abort(); return; }
       // Run metrics only; no reasoning text, prompt content or host paths.
       const telemetry = { model: result?.model || normalizeLocalModel(payload.model), inputTokens: Number(result?.usage?.prompt_tokens || 0), outputTokens: Number(result?.usage?.completion_tokens || 0), tokensPerSecond: Number.isFinite(result?.metrics?.tokensPerSecond) ? result.metrics.tokensPerSecond : null, generatedTokens: Number(result?.metrics?.generatedTokens || result?.usage?.completion_tokens || 0), evalMs: Number(result?.metrics?.evalMs || 0), loadMs: Number(result?.metrics?.loadMs || 0), modelCalls: Number(result?.metrics?.modelCalls || 0), durationMs: Number(result?.durationMs || 0), iterations: Number(result?.iterations || 0), toolCalls: Number(result?.toolCalls || 0), toolsExecuted: Number(result?.toolsExecuted || 0), toolNames: Array.isArray(result?.toolNames) ? result.toolNames.slice(0, 8) : [], thinkingState: String(result?.thinkingState || "off"), thinkingCharacters: Number(result?.thinkingCharacters || 0) };
-      const assistantMessage = conversation && this.localData?.addMessage ? this.localData.addMessage(conversation.id, "assistant", String(result?.content || streamed), "JUNCTION", telemetry) : null;
+      const assistantMessage = conversation && this.localData?.addMessage ? this.localData.addMessage(conversation.id, "assistant", String(result?.content || streamed), "NETHRA", telemetry) : null;
       emit("chat.complete", { conversationId: conversation?.id || payload.conversationId || null, messageId: assistantMessage?.id || null, content: result?.content || streamed, model: result?.model || payload.model || null, usage: result?.usage || null, telemetry });
     } catch (error) { if (!controller.signal.aborted) emit("chat.error", { code: error?.name === "AbortError" ? "LAN_CANCELLED" : "LAN_MODEL_FAILED", message: redactedError(error) }); }
     finally { clearInterval(run.authorizationTimer); run.authorizationTimer = null; this.runs.delete(replayKey); state.runs.delete(replayKey); if (events.at(-1)?.type === "chat.complete" || events.at(-1)?.type === "chat.error") { this.replayCache.set(replayKey, events.slice(-1)); while (this.replayCache.size > 256) this.replayCache.delete(this.replayCache.keys().next().value); } }

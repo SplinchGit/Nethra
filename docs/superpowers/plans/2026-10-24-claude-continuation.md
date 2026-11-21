@@ -1,4 +1,4 @@
-# Claude continuation: Junction
+# Claude continuation: Nethra
 
 Source: owner's brief in Claude session a6296cec-1056-5414-8ff6-ef8b3661d279, 24 October. Claude stopped while integrating Android chat appearance and the call timer. Preserve the existing dirty checkout and owner configuration.
 

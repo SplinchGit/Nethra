@@ -9,9 +9,9 @@ const { createHandler } = require("./app");
 const { inspectWindowsContext } = require("./windows-context");
 
 const host = "127.0.0.1";
-const port = Number(process.env.JUNCTION_PC_PORT || 43110);
-const token = process.env.JUNCTION_PC_TOKEN || crypto.randomBytes(32).toString("base64url");
-const auditPath = process.env.JUNCTION_PC_AUDIT_PATH || path.join(os.homedir(), ".junction", "pc-companion-audit.jsonl");
+const port = Number(process.env.NETHRA_PC_PORT || 43110);
+const token = process.env.NETHRA_PC_TOKEN || crypto.randomBytes(32).toString("base64url");
+const auditPath = process.env.NETHRA_PC_AUDIT_PATH || path.join(os.homedir(), ".nethra", "pc-companion-audit.jsonl");
 function startCompanion(options = {}) {
   const selectedHost = options.host || host;
   const selectedPort = options.port ?? port;
@@ -27,7 +27,7 @@ function startCompanion(options = {}) {
 
 if (require.main === module) {
   startCompanion().then(result => {
-    console.log(`Junction PC companion listening on http://${result.host}:${result.port}`);
+    console.log(`Nethra PC companion listening on http://${result.host}:${result.port}`);
     console.log(`Session token: ${result.token}`);
     console.log(`Audit log: ${result.auditPath}`);
   }).catch(error => { console.error(error.message); process.exitCode = 1; });

@@ -52,7 +52,7 @@ app.post("/suggest/build", async (req, res) => {
 });
 
 const server = app.listen(config.port, () => {
-  console.log(`Junction build-calculator daemon listening on ${config.port}`);
+  console.log(`Nethra build-calculator daemon listening on ${config.port}`);
   if (!isEbayConfigured()) {
     console.warn("EBAY_APP_ID/EBAY_CERT_ID not set — pricing endpoints will return errors until configured.");
   }

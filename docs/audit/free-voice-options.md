@@ -1,4 +1,4 @@
-# Free voice options for Junction
+# Free voice options for Nethra
 
 Researched 27 September 2026. **Nothing installed or implemented; no speech
 endpoint called.** These are candidate architectures, not benchmark results on
@@ -18,7 +18,7 @@ comparing if transcription quality on James's accent is stronger in a local test
 This recommendation is an engineering inference from their supported interfaces,
 not a claim that one has won a quality/latency test here.
 
-All three still need Junction's existing turn-taking, interruption, audio-focus,
+All three still need Nethra's existing turn-taking, interruption, audio-focus,
 Bluetooth and cancellation behavior. “Free speech” also does not make a selected
 cloud LLM free: a fully local setup needs local inference as well. A Windows-hosted
 local speech engine is another deployment choice for weaker phones, but then

@@ -1,9 +1,9 @@
 'use strict';
 
 const DEFAULT_MODEL='qwen3:30b';
-const NEXT_80B_MODEL='junction-qwen3-next:80b-q3km';
-const NEXT_80B_THINKING_MODEL='junction-qwen3-next-thinking:80b-q3km';
-const NEXT_80B_THINKING_Q4_MODEL='junction-qwen3-next-thinking:80b-q4km';
+const NEXT_80B_MODEL='nethra-qwen3-next:80b-q3km';
+const NEXT_80B_THINKING_MODEL='nethra-qwen3-next-thinking:80b-q3km';
+const NEXT_80B_THINKING_Q4_MODEL='nethra-qwen3-next-thinking:80b-q4km';
 const OFFICIAL_THINKING_Q4_SOURCE='hf.co/Qwen/Qwen3-Next-80B-A3B-Thinking-GGUF:Q4_K_M';
 const Q4_CONTEXT_TOKENS=8192;
 const Q4_OUTPUT_TOKENS=2048;
@@ -21,6 +21,7 @@ const PROFILES=Object.freeze({
 });
 
 function profileFor(model=DEFAULT_MODEL){
+  if(require('./subscription-models').isSubscriptionModel(model))return require('./subscription-models').subscriptionProfile;
   if(!Object.hasOwn(PROFILES,model))throw new Error('Unsupported Nethra model');
   return PROFILES[model];
 }

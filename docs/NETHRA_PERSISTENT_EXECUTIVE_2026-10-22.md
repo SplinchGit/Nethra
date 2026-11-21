@@ -26,7 +26,7 @@ This report records the implemented state on `feat/nethra-durable-agent`. It doe
 
 Windows `npm test` passed 121/121. Scripted restart/approval acceptance passed 29/29 with real SQLite/files and simulated inference. Electron offline UI smoke passed navigation, objective controls, renderer IPC and persistence. Android `:app:testDebugUnitTest :app:assembleDebug` passed for versionCode 100153 (166 tests across 29 suites). APK: `apps/android/build/outputs/apk/debug/app-debug.apk`, SHA-256 `03E60F8D85B762E15D0BA597BAEC0913017AB032E755A0B565DE9FDC3FD98B78`. ADB listed no device, so no physical install or cross-device smoke is claimed.
 
-The packaged Windows runtime was rebuilt at the stable `apps/windows/dist/nethra-agent-chat-20261022` path. Five key package files matched source byte-for-byte. `Nethra.lnk` targets that path, the Nethra window responds, and the authenticated host listens on private interfaces at port 43111. The owner database migrated to schema 4 with all four prior task records present and no active lease. Regenerating the shortcut requires `JUNCTION_PACK_OUTPUT=nethra-agent-chat-20261022` as well as packaging; otherwise it targets the stale default output and opens a recovery window against schema 4.
+The packaged Windows runtime was rebuilt at the stable `apps/windows/dist/nethra-agent-chat-20261022` path. Five key package files matched source byte-for-byte. `Nethra.lnk` targets that path, the Nethra window responds, and the authenticated host listens on private interfaces at port 43111. The owner database migrated to schema 4 with all four prior task records present and no active lease. Regenerating the shortcut requires `NETHRA_PACK_OUTPUT=nethra-agent-chat-20261022` as well as packaging; otherwise it targets the stale default output and opens a recovery window against schema 4.
 
 ## Important limits and next stage
 
@@ -69,7 +69,7 @@ Signed bytes are parsed only after verification. A Kotlin test verifies a vector
 - CONFIRM: `CONFIRM_INSTALL`. The phone shows a notification and an Approve/Reject card in the Nethra panel, and returns the approved versionCode and SHA-256. Nethra cannot issue CONFIRM commands.
 - No other kinds exist.
 
-**Shared executor.** `apps/windows/scripts/junction-ops.cjs` is used by Claude (through Remote Control), Codex and the owner:
+**Shared executor.** `apps/windows/scripts/nethra-ops.cjs` is used by Claude (through Remote Control), Codex and the owner:
 - `device send STATUS|SMOKE_TEST|COLLECT_LOGS [--wait]`, `device list|get|wait`;
 - `adb devices|connect`. Connections are allowed only to USB serials and `100.64.0.0/10` Tailscale addresses;
 - `adb install APK --serial S`. It refuses downgrades, requests `CONFIRM_INSTALL` and runs `adb install -r` only after the phone approves that exact hash.
@@ -82,7 +82,7 @@ The 30B model gets `phone_check` (READ kinds only) and `phone_result`. A result 
 
 ## Deployment and Google Calendar source (22 October 2026, late)
 
-**Committed:** `fa8c6ce` (Nethra, 30B, review fixes, device commands), `c1178f7` (rebuild procedure) and `782389f` (Calendar). Not pushed. Crash logs, `artifacts/` run outputs, `junction_pull.db` and the stray `apps/windows/lan-server.js` copy were deliberately left uncommitted.
+**Committed:** `fa8c6ce` (Nethra, 30B, review fixes, device commands), `c1178f7` (rebuild procedure) and `782389f` (Calendar). Not pushed. Crash logs, `artifacts/` run outputs, `nethra_pull.db` and the stray `apps/windows/lan-server.js` copy were deliberately left uncommitted.
 
 **Deployed:** the package at `dist/nethra-agent-chat-20261022` matches source byte-for-byte for the Nethra, device and calendar modules. It launched through `Nethra.lnk` and listens on 10.164.57.103, 100.95.8.42 and 192.168.56.1 port 43111. The owner database is still schema 4 with 4 tasks and no lease. The waiting objective received `PROFILE_DEFAULTED` (weekly check-in due 2026-10-29); the completed ones were left unchanged. The first rebuild raced the startup task's restart-on-failure and left a bare Electron window, so `AGENTS.md` now requires disabling the task while packing.
 

@@ -1,4 +1,4 @@
-Write-Host "Junction update: pulling latest changes..." -ForegroundColor Cyan
+Write-Host "Nethra update: pulling latest changes..." -ForegroundColor Cyan
 git pull
 
 if (Test-Path ".\\apps\\web\\package.json") {

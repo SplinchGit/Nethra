@@ -55,13 +55,13 @@ function startExperiment({store,localData,task,args,now=Date.now(),token}){
  */
 function changePoint(experiment,{store,workStatus,now}){
   const code=experiment.changeKind==='code';
-  let at=code&&!String(experiment.changeActor||'').startsWith('Junction')?null:experiment.changeAt,actor=experiment.changeActor;
-  if(!at&&experiment.workId&&workStatus){const work=workStatus(experiment.workId);if(work?.promotedAt>experiment.startedAt){at=work.promotedAt;actor='Junction (Work Activity promotion)';}}
+  let at=code&&!/^Nethra \(commit [a-f0-9]{7,40}:|^Nethra \(Work Activity promotion\)/.test(String(experiment.changeActor||''))?null:experiment.changeAt,actor=experiment.changeActor;
+  if(!at&&experiment.workId&&workStatus){const work=workStatus(experiment.workId);if(work?.promotedAt>experiment.startedAt){at=work.promotedAt;actor='Nethra (Work Activity promotion)';}}
   if(!at)return {waiting:'WAITING_FOR_CHANGE',detail:code?(experiment.workId?'The linked development draft has not been verified and promoted yet.':'No verified code change yet. Use mark_change with workId (a Work Activity draft) or commit (a sha that changed apps/windows/src after the baseline).'):'Mark the experiment change once it has been applied.'};
   if(experiment.changeKind!=='code')return {at,actor};
-  // Code only takes effect in a Junction process started after the change.
+  // Code only takes effect in a Nethra process started after the change.
   const started=store.hostStartsAfter?.(at)?.[0];
-  if(!started)return {at,actor,waiting:'WAITING_FOR_RESTART',detail:'The change is code; restart Junction so new samples come from the changed build.'};
+  if(!started)return {at,actor,waiting:'WAITING_FOR_RESTART',detail:'The change is code; restart Nethra so new samples come from the changed build.'};
   return {at:started,actor,changeAt:at};
 }
 

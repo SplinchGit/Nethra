@@ -1,14 +1,14 @@
 # Android to Windows feature parity
 
-Android remains Junction's authoritative mature client. This map records what is
+Android remains Nethra's authoritative mature client. This map records what is
 implemented rather than treating visual navigation as feature parity.
 
 ## Requirement-by-requirement matrix
 
 | Android surface / workflow | Windows state | Notes |
 | --- | --- | --- |
-| Junction Material theme, typography, shapes | **Implemented** | Exact brand blue/violet and Android's dark primary/secondary containers, typography scale, and 6/10/14/20/28 shape language adapted to desktop |
-| Feed / “Your Junction” | **In progress** | Real local activity plus explicitly refreshed, read-only shared Android Feed; Windows notification ingestion remains platform work |
+| Nethra Material theme, typography, shapes | **Implemented** | Exact brand blue/violet and Android's dark primary/secondary containers, typography scale, and 6/10/14/20/28 shape language adapted to desktop |
+| Feed / “Your Nethra” | **In progress** | Real local activity plus explicitly refreshed, read-only shared Android Feed; Windows notification ingestion remains platform work |
 | Chat shelf, local history, rename/delete | **Implemented** | Durable Chat-only collapsible desktop drawer with keyboard operations |
 | Provider and model selection | **Implemented** | Android-derived provider/model cards expressed as desktop selectors with catalog cost tiers and custom model entry |
 | Provider routing and encrypted keys | **Implemented** | Text routing for five provider paths; credentials are per-PC DPAPI data |
@@ -37,13 +37,13 @@ implemented rather than treating visual navigation as feature parity.
 | Multi-provider text chat | Implemented for OpenAI, Anthropic, DeepSeek, Groq, and custom OpenAI-compatible endpoints |
 | Device-encrypted provider keys | Implemented with Electron `safeStorage`; keys never sync |
 | Durable owner memory (200-fact cap) | Implemented locally with explicit add/forget controls |
-| Provenance-labelled context | Implemented: OWNER messages, JUNCTION replies/memory, UNTRUSTED UI Automation context |
+| Provenance-labelled context | Implemented: OWNER messages, NETHRA replies/memory, UNTRUSTED UI Automation context |
 | Action audit review | Implemented for local Windows companion proposals/outcomes |
 | Settings/onboarding fundamentals | Implemented for account, provider, memory, privacy, and device sync state |
 
 Desktop provider chat is intentionally text-only and cannot execute PC actions.
 Local Agent is a separate per-message Ollama workflow with one read-only tool:
-Junction Search. Its schema-constrained decisions, search budget, deterministic
+Nethra Search. Its schema-constrained decisions, search budget, deterministic
 egress checks, evidence ledger, and citation validation are enforced outside the
 model. Requests remain bounded and owner-triggered.
 

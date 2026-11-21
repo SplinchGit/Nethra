@@ -18,18 +18,18 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
   try{
     while(!fs.existsSync(path.join(profile,'nethra','nethra.sqlite')))await wait(50);
-    app.emit('second-instance',{},['Junction.exe']);
+    app.emit('second-instance',{},['Nethra.exe']);
     let window;
     while(!(window=BrowserWindow.getAllWindows()[0]))await wait(50);
     while(window.webContents.isLoadingMainFrame())await wait(50);
     const result=await window.webContents.executeJavaScript(`(async()=>{
-      const {task}=await window.junction.nethra('nethra.create',{goal:'Inspect the approved source',persistent:true});
-      const reply=await window.junction.sendMessage({conversationId:task.conversationId,content:'Use the latest figures',runId:'desktop-task-turn-1'});
-      const saved=await window.junction.nethra('nethra.get',{id:task.id});
+      const {task}=await window.nethra.nethra('nethra.create',{goal:'Inspect the approved source',persistent:true});
+      const reply=await window.nethra.sendMessage({conversationId:task.conversationId,content:'Use the latest figures',runId:'desktop-task-turn-1'});
+      const saved=await window.nethra.nethra('nethra.get',{id:task.id});
       return {reply:reply.message.content,model:reply.model,status:saved.task.status,inputs:saved.task.ownerInputs};
     })()`);
     assert.match(result.reply,/saved your message/i);
-    assert.equal(result.model,'Junction foreman');
+    assert.equal(result.model,'Nethra foreman');
     assert.equal(result.inputs.length,1);
     assert.equal(result.inputs[0].requestId,'desktop-task-turn-1');
     assert.equal(result.status,'CREATED');

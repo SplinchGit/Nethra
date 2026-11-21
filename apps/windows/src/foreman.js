@@ -64,7 +64,7 @@ class Foreman {
     this.db.exec('PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA busy_timeout=5000;');
     if (this.db.prepare('PRAGMA integrity_check').get().integrity_check !== 'ok') throw new Error('Foreman database is damaged; restore a backup.');
     const version=this.db.prepare('PRAGMA user_version').get().user_version;
-    if(version>1) throw new Error('Foreman database requires a newer Junction.');
+    if(version>1) throw new Error('Foreman database requires a newer Nethra.');
     this.db.exec('CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY, body TEXT NOT NULL); CREATE TABLE IF NOT EXISTS events(seq INTEGER PRIMARY KEY AUTOINCREMENT, project TEXT NOT NULL, at INTEGER NOT NULL, kind TEXT NOT NULL, detail TEXT NOT NULL); CREATE TABLE IF NOT EXISTS receipts(id TEXT PRIMARY KEY, binding TEXT NOT NULL); PRAGMA user_version=1;');
     this.db.exec('CREATE TABLE IF NOT EXISTS activity_review(project TEXT PRIMARY KEY, seq INTEGER NOT NULL)');
     this.db.exec(`CREATE TABLE IF NOT EXISTS project_documents(
@@ -157,13 +157,13 @@ class Foreman {
     return documentMetadata(this.getDocument(id,documentId,revision));
   }
   async importDocument(id, requestId, selectedPath) {
-    if(this.closed)throw new Error('Junction is quitting');
+    if(this.closed)throw new Error('Nethra is quitting');
     const replay=this.documentImportReceipt(id,requestId);
     if(replay)return replay;
     this.get(id);
     if(this.jobs.has(id)||this.operations.has(id))throw new Error('Wait for current project work or review to finish before importing');
     const document=await readApprovedDocument(selectedPath);
-    if(this.closed)throw new Error('Junction is quitting');
+    if(this.closed)throw new Error('Nethra is quitting');
     const project=this.get(id);
     if(this.jobs.has(id)||this.operations.has(id))throw new Error('Wait for current project work or review to finish before importing');
     const previous=this.db.prepare('SELECT * FROM project_documents WHERE project=? AND sourceKey=? ORDER BY revision DESC LIMIT 1').get(id,document.sourceKey);
@@ -191,7 +191,7 @@ class Foreman {
     });
   }
   updateContext(change, requestId, conversationExists) {
-    if(this.closed)throw new Error('Junction is quitting');
+    if(this.closed)throw new Error('Nethra is quitting');
     text(requestId,160,'request ID');
     if(!change||typeof change!=='object'||Array.isArray(change))throw new Error('Invalid project context change');
     const {id,revision,kind,action,key}=change;
@@ -245,7 +245,7 @@ class Foreman {
     return this.save(project,'CONTEXT_UPDATED',`${kind} ${action}`,{id:requestId,binding});
   }
   async create(input) {
-    if(this.closed)throw new Error('Junction is quitting');
+    if(this.closed)throw new Error('Nethra is quitting');
     if(this.list().length>=50)throw new Error('Project limit reached');
     const name=text(input.name,80,'project name'),objective=text(input.objective,12000,'objective');
     if(!Array.isArray(input.tasks)||!input.tasks.length||input.tasks.length>50)throw new Error('Provide 1–50 concrete tasks');
@@ -253,13 +253,13 @@ class Foreman {
     if(input.sharedCheckout!==undefined&&typeof input.sharedCheckout!=='boolean')throw new Error('Invalid shared checkout preference');
     const inspected=await this.executor.inspect(input);
     if(inspected.scopeFile)for(const task of tasks)if(!task.files.length)task.files=[inspected.scopeFile];
-    if(this.closed)throw new Error('Junction is quitting');
+    if(this.closed)throw new Error('Nethra is quitting');
     const p={id:crypto.randomUUID(),name,objective,sharedCheckout:input.sharedCheckout===true,...(typeof input.coordinationBrief==='string'?{coordinationBrief:input.coordinationBrief.slice(0,700)}:{}),repoPath:input.repoPath,conversationId:input.conversationId||null,sourceObjectiveId:input.sourceObjectiveId||null,codeReviewVerdict:input.sourceObjectiveId&&input.codeReviewVerdict==='READY'?'READY':null,verification:inspected.verification||input.verification||[],...inspected,revision:0,status:'DRAFT',tasks,activeTask:null,roadmap:tasks.map(t=>t.title),decisions:[],questions:[],handoff:'No work started',nextAction:'Waiting for an owner instruction',retryAt:null,createdAt:this.now()};
     if(p.codeReviewVerdict==='READY')p.reviewedProposal=proposalFingerprint(p);
     return this.save(p,'CREATED','Owner objective registered; waiting for Start');
   }
   async submit(input) {
-    if(this.closed)throw new Error('Junction is quitting');
+    if(this.closed)throw new Error('Nethra is quitting');
     if(input.projectId){
       const p=this.get(input.projectId);const title=text(input.task,240,'task'),acceptance=text(input.acceptance||'Complete the owner request and pass the detected project checks',4000,'acceptance criteria');
       if(p.sourceObjectiveId)throw new Error('Nethra code work needs a new Codex reviewed draft for a different task');
@@ -294,7 +294,7 @@ class Foreman {
       if(needsFreshProposalReview(p))throw new Error('The queued proposal changed. Request a fresh review before starting it.');
       if(engineerOwnsCheckout(p))throw new Error('Codex or Claude must pick up this work in an engineering session.');
       if(autoHandoff!==undefined&&typeof autoHandoff!=='boolean')throw new Error('Invalid provider handoff approval');
-      if(this.closed)throw new Error('Junction is quitting');
+      if(this.closed)throw new Error('Nethra is quitting');
       if(!this.mayDispatch(p))throw new Error('Resume the linked Nethra task first');
         if(p.sourceObjectiveId&&p.codeReviewVerdict!=='READY')throw new Error('A Codex READY verdict for this exact Nethra proposal is required before implementation');
         if(p.sourceObjectiveId&&p.tasks.some(task=>!measurableAcceptance(task.acceptance)))throw new Error('Provide measurable acceptance criteria before starting Nethra code work');

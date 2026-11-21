@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Preserve existing task state and the default `qwen3:30b` for legacy tasks.
-- The 80B option uses the local `junction-qwen3-next:80b-q3km` alias with its corrected Ollama template.
+- The 80B option uses the local `nethra-qwen3-next:80b-q3km` alias with its corrected Ollama template.
 - No silent fallback or task-state fork on a model failure.
 
 ## Review Focus

@@ -53,7 +53,7 @@ The cold run's original tokens/s figure was wrong (load time counted as generati
   (all / only outcomes / off) apply.
 - **Task window** redesigned on Windows (status chip, “needs you” first, clear actions, editor,
   full record collapsed) and extended on Android.
-- **Appearance**: light/dark/system, Junction/Sakura/Moss palettes, Sakura Mountain artwork from
+- **Appearance**: light/dark/system, Nethra/Sakura/Moss palettes, Sakura Mountain artwork from
   the supplied wallpaper (62 KB WebP) at the edges, separate petal layer (~24 fps, paused when
   hidden/unfocused, off under reduced motion and power saving), intensity controls; persisted.
 
@@ -65,8 +65,8 @@ errors. Android: unit suite passes (202+ tests) and `assembleDebug` succeeds.
 - Android call timer and connecting / active / reconnecting / ended states.
 - Per-turn session context from the phone (voice vs text, spoken vs typed, read-aloud on).
 - Spoken approval: exact disclosure, one-use, 45 s expiry, bound to plan + disclosure digest,
-  rejected if it overlaps Junction's speech, invalidated if the plan changes, audit row + chat
-  record. **Email by voice**: draft → read recipient and text → “send it” → Junction re-reads the
+  rejected if it overlaps Nethra's speech, invalidated if the plan changes, audit row + chat
+  record. **Email by voice**: draft → read recipient and text → “send it” → Nethra re-reads the
   draft from Gmail at send time and refuses if recipient or text changed → reports Gmail's
   confirmation. Drafts are known for the current app session only; after a restart, approve on screen.
 - Active TTS identity (engine, voice, locale, network/local) in Voice settings; previews.
@@ -82,8 +82,8 @@ errors. Android: unit suite passes (202+ tests) and `assembleDebug` succeeds.
 
 ## Running
 
-Windows (from `apps/windows`, PowerShell): follow `AGENTS.md` — disable the `Junction Nethra <SID>`
-task, close Junction, `$env:JUNCTION_PACK_OUTPUT='nethra-agent-chat-20261022'`,
+Windows (from `apps/windows`, PowerShell): follow `AGENTS.md` — disable the `Nethra Nethra <SID>`
+task, close Nethra, `$env:NETHRA_PACK_OUTPUT='nethra-agent-chat-20261022'`,
 `npm run pack:workspace`, `npm run desktop`, open the Desktop shortcut, re-enable the task.
 
 Android (repo root): `./gradlew.bat :app:testDebugUnitTest :app:assembleDebug`, then

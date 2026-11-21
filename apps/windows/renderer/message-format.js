@@ -76,7 +76,7 @@
   }
   // Verbose run metrics shown under a reply. Generation speed comes from the
   // model host's own eval timing, so it is omitted when it was not measured
-  // rather than being computed from Junction's wall clock.
+  // rather than being computed from Nethra's wall clock.
   function telemetryLine(value) {
     if (!value || typeof value !== "object") return "";
     const parts = [];

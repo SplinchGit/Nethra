@@ -7,15 +7,15 @@ placement for the assistant.
 
 ## Application
 
-Location: `apps/android/src/main/java/com/splinch/junction/app/`
+Location: `apps/android/src/main/java/com/splinch/nethra/app/`
 
-Entry points: `MainActivity.kt`, `JunctionApplication.kt`
+Entry points: `MainActivity.kt`, `NethraApplication.kt`
 
 Owns Android application startup and app-wide configuration. It wires repositories, services, navigation, and the assistant runtime without owning their implementations.
 
 ## Assistant
 
-Location: `apps/android/src/main/java/com/splinch/junction/assistant/`
+Location: `apps/android/src/main/java/com/splinch/nethra/assistant/`
 
 Entry point: `runtime/ChatManager.kt`
 
@@ -31,14 +31,14 @@ Entry point: `runtime/ChatManager.kt`
 
 ## Features
 
-Location: `apps/android/src/main/java/com/splinch/junction/feature/`
+Location: `apps/android/src/main/java/com/splinch/nethra/feature/`
 
 Each user-facing capability has one primary home:
 
 - `chat/` — chat screen;
 - `voice/` — local and realtime voice, call service, models, and voice UI; entry point `VoiceCoordinator.kt`;
 - `feed/` — feed repository, models, and screen; entry point `FeedRepository.kt`;
-- `notification/` — notification access, capture service, and tap handling; entry point `service/JunctionNotificationListenerService.kt`;
+- `notification/` — notification access, capture service, and tap handling; entry point `service/NethraNotificationListenerService.kt`;
 - `gmail/` — Gmail assistant capability;
 - `scheduler/` — digest scheduling and worker;
 - `settings/` — settings screen and feature-specific settings UI;
@@ -49,23 +49,23 @@ Each user-facing capability has one primary home:
 
 ## Data
 
-Location: `apps/android/src/main/java/com/splinch/junction/data/`
+Location: `apps/android/src/main/java/com/splinch/nethra/data/`
 
-Entry point: `database/JunctionDatabase.kt`
+Entry point: `database/NethraDatabase.kt`
 
 Owns Room entities and DAOs grouped by stored domain, preference persistence, encrypted secret storage, and Firebase-backed synchronisation. The reorganisation leaves schema names, migrations, and preference keys unchanged.
 
 ## Platform
 
-Location: `apps/android/src/main/java/com/splinch/junction/platform/`
+Location: `apps/android/src/main/java/com/splinch/nethra/platform/`
 
-Entry points: `accessibility/JunctionAccessibilityService.kt`, `shizuku/ShizukuCapability.kt`
+Entry points: `accessibility/NethraAccessibilityService.kt`, `shizuku/ShizukuCapability.kt`
 
 Owns direct Android and privileged API integration for accessibility, Bluetooth audio, overlay services, and Shizuku. User-facing controls stay with their feature.
 
 ## Evaluation
 
-Location: `apps/android/src/main/java/com/splinch/junction/evaluation/`
+Location: `apps/android/src/main/java/com/splinch/nethra/evaluation/`
 
 Entry points: `ActionAuditEvaluator.kt`, `PlanExecutionScenarioRunner.kt`, `TelemetryExporter.kt`
 
@@ -73,9 +73,9 @@ Owns runtime measurement, scenario execution, and telemetry export. Unit and ins
 
 ## Shared UI
 
-Location: `apps/android/src/main/java/com/splinch/junction/ui/`
+Location: `apps/android/src/main/java/com/splinch/nethra/ui/`
 
-Entry points: `theme/Theme.kt`, `component/JunctionTextField.kt`
+Entry points: `theme/Theme.kt`, `component/NethraTextField.kt`
 
 Contains only reusable Compose components and the shared theme. Feature screens and feature-specific controls live under `feature/<name>/`.
 
@@ -127,7 +127,7 @@ Supporting projects are grouped by role:
 
 - `services/server/` — optional self-hosted relay and integrations;
 - `services/functions/` — primary Firebase Functions backend;
-- `services/junction-functions/` — secondary Junction Firebase codebase;
+- `services/nethra-functions/` — secondary Nethra Firebase codebase;
 - `tools/companion/` — local device-control and diagnostic CLI.
 
 Firebase source declarations, the web CI workflow, maintenance scripts, ignore

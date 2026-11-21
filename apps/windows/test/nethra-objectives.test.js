@@ -51,12 +51,12 @@ test('ordinary model chat sends real durable task messages once through the comm
 test('an explicit chat model selection updates a reused task while retaining its saved work',async t=>{
   const {store,objectives}=fixture(t),goal='Prepare the workshop notes';
   const first=await objectives.create({goal,conversationId:'chat',requestId:'create-default'});
-  assert.equal(first.model,'junction-qwen3-next-thinking:80b-q4km');assert.equal(first.continuous,true);
+  assert.equal(first.model,'nethra-qwen3-next-thinking:80b-q4km');assert.equal(first.continuous,true);
   store.update(first.id,{plan:['Read the source','Revise the notes'],completedSteps:['Read the source'],pendingSteps:['Revise the notes'],contextCheckpoint:{activeHypothesis:'Keep the source facts'}});
-  await objectives.create({goal,conversationId:'chat',model:'junction-qwen3-next:80b-q3km',continuous:true,requestId:'select-80b'});
-  await assert.doesNotReject(objectives.create({goal,conversationId:'chat',model:'junction-qwen3-next:80b-q3km',continuous:true,requestId:'select-80b'}));
+  await objectives.create({goal,conversationId:'chat',model:'nethra-qwen3-next:80b-q3km',continuous:true,requestId:'select-80b'});
+  await assert.doesNotReject(objectives.create({goal,conversationId:'chat',model:'nethra-qwen3-next:80b-q3km',continuous:true,requestId:'select-80b'}));
   const saved=store.get(first.id);
-  assert.equal(store.list().length,1);assert.equal(saved.model,'junction-qwen3-next:80b-q3km');
+  assert.equal(store.list().length,1);assert.equal(saved.model,'nethra-qwen3-next:80b-q3km');
   assert.deepEqual(saved.completedSteps,['Read the source']);assert.equal(saved.contextCheckpoint.activeHypothesis,'Keep the source facts');
 });
 
@@ -89,8 +89,8 @@ test('an explicit model handoff fences the old execution while preserving task w
   const claim=store.claim('old-worker');assert.ok(claim);
   store.beginInference(task.id,claim.token);clock+=500;
   let selected;
-  assert.doesNotThrow(()=>{selected=store.configure(task.id,{model:'junction-qwen3-next:80b-q3km'},store.get(task.id).revision,'switch-active-model');});
-  assert.equal(selected.model,'junction-qwen3-next:80b-q3km');assert.deepEqual(selected.completedSteps,['Read source']);
+  assert.doesNotThrow(()=>{selected=store.configure(task.id,{model:'nethra-qwen3-next:80b-q3km'},store.get(task.id).revision,'switch-active-model');});
+  assert.equal(selected.model,'nethra-qwen3-next:80b-q3km');assert.deepEqual(selected.completedSteps,['Read source']);
   assert.equal(selected.budget.totalMs,500);
   assert.throws(()=>store.assertLease(task.id,claim.token),/lease/i);
   const next=store.claim('new-worker');assert.equal(next.task.id,task.id);assert.equal(next.task.model,selected.model);

@@ -4,7 +4,7 @@
 
 Full write-up: `docs/HANDOFF_2026-10-21_QWEN14B_AND_RELAY.md`.
 
-- Junction's runtime talks to `qwen3:14b` correctly (7/7 live checks). The reported CUDA
+- Nethra's runtime talks to `qwen3:14b` correctly (7/7 live checks). The reported CUDA
   crash was host resource exhaustion: Ollama's GPU-discovery watchdog timed out, it used a
   stale free-VRAM reading, the 8.23 GiB full offload failed, and the CPU fallback failed too
   on a 11.9 GiB host with ~2.8 GiB free. Added failure classification plus one bounded
@@ -18,7 +18,7 @@ Full write-up: `docs/HANDOFF_2026-10-21_QWEN14B_AND_RELAY.md`.
   listening, phone→PC:43111, PC→phone:45999 and PC→phone:5555 all fail, the last against the
   phone's own ADB daemon confirmed listening via `ss`; the same listener connects in 0.8 ms
   over USB. No firewall rule can fix this network.
-- `PRIVATE_IPV4` rejected `100.64.0.0/10`, so Junction could never bind Tailscale. Fixed, and
+- `PRIVATE_IPV4` rejected `100.64.0.0/10`, so Nethra could never bind Tailscale. Fixed, and
   added `preferredBindAddresses()`: when an overlay exists the API binds the overlay **only**,
   no longer exposing itself on the untrusted shared LAN. On this host it now selects
   `100.95.8.42` alone, where it previously bound `10.164.57.103` and `192.168.56.1`.
@@ -74,15 +74,15 @@ Verification distinction: live model file/tool and thinking checks are separate 
 - A guarded attempt to reclaim space from obsolete generated app runtimes was rejected twice by local execution policy. The runtime targeted by the Desktop shortcut was preserved. No repository source was removed.
 - Fresh live Ollama `qwen3:14b` objective completed in 9.811 seconds with real `read_file` and `write_draft` calls. Scripted persistence acceptance passed all 29 checks.
 - Android build 100144 passed 157 tests across 28 suites, installed on SM_A528B, and opened the Nethra objective screen without a fatal app exception. APK SHA-256 is recorded in `docs/NETHRA_DELIVERY.md`.
-- Phone `10.164.57.104/24` and PC `10.164.57.103/24` share a subnet. The phone reports the host unavailable; Ollama is loopback-only and no active Junction LAN listener was found. Do not infer client isolation from this: the host was not listening.
+- Phone `10.164.57.104/24` and PC `10.164.57.103/24` share a subnet. The phone reports the host unavailable; Ollama is loopback-only and no active Nethra LAN listener was found. Do not infer client isolation from this: the host was not listening.
 
 Final status: the scoped Nethra core passed full Windows and Android unit suites, deterministic persistence acceptance, a live 14B tool-use run and a physical Android UI smoke. The complete master task is not production-ready: cross-device Nethra synchronization, packaged-host launch/restart and OS sleep/reboot acceptance remain outstanding. General semantic outcome verification is heuristic; durable child records, general document ingestion, external-action adapters, notifications, shell sandbox and broader memory/permission UI remain incomplete as listed in `docs/NETHRA_DELIVERY.md`.
 
 ## Live-host restart follow-up (21 October 2026)
 
-- With the user's approval, closed the old `qwen14b-performance` Junction process and started the Nethra package using the existing Junction user-data profile. No application data was cleared.
+- With the user's approval, closed the old `qwen14b-performance` Nethra process and started the Nethra package using the existing Nethra user-data profile. No application data was cleared.
 - The launch reproduced a packaged-only startup defect: the host tried to invoke `nethra-startup.ps1` from inside `app.asar`, where PowerShell cannot access it. Added regression tests and copied the script to `resources/nethra-startup.ps1` in packaged builds; packaged runtime now resolves the unpacked script path.
 - `apps/windows` full `npm test` passed after the fix; Nethra suite 70/70. Built `dist/nethra-agent-win-repaired`, launched it in the existing profile, and verified the desktop shortcut and scheduled task target that runtime.
-- Live host now listens on `10.164.57.103:43111`; the task `Junction Nethra <user SID>` is registered and Ready. This proves Windows host initialization, not Android synchronization.
+- Live host now listens on `10.164.57.103:43111`; the task `Nethra Nethra <user SID>` is registered and Ready. This proves Windows host initialization, not Android synchronization.
 - A phone TCP connection to that PC listener returned `No route to host`; ping was filtered by the Wi-Fi gateway. Host/phone share a `/24`, so network client isolation or filtering remains likely. Tailscale is installed on Windows but logged out and unavailable on the phone.
-- Android UI inspection was stopped after the foreground app was found to be ChatGPT rather than Junction. No text was entered or submitted. The earlier Junction installation/UI smoke remains valid; no cross-device acceptance is claimed.
+- Android UI inspection was stopped after the foreground app was found to be ChatGPT rather than Nethra. No text was entered or submitted. The earlier Nethra installation/UI smoke remains valid; no cross-device acceptance is claimed.

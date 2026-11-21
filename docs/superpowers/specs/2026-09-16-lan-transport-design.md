@@ -1,8 +1,8 @@
-# Junction LAN Transport Design
+# Nethra LAN Transport Design
 
 ## Goal
 
-Allow a paired Android Junction client to use models and authoritative conversation storage on a Windows Junction instance over the same local network, while preserving the existing Firebase path as the remote fallback.
+Allow a paired Android Nethra client to use models and authoritative conversation storage on a Windows Nethra instance over the same local network, while preserving the existing Firebase path as the remote fallback.
 
 ## Non-goals
 
@@ -12,9 +12,9 @@ Allow a paired Android Junction client to use models and authoritative conversat
 
 ## Architecture
 
-Android application code continues to use the existing provider and conversation abstractions. A new `JunctionTransport` boundary selects `LanTransport` when a paired Windows service is discovered and reachable, otherwise the existing Firebase-backed provider/synchronizer remains available. A user-selectable mode supports `AUTO`, `LAN_ONLY`, and `REMOTE_ONLY` (the latter is the requested 5G/out-and-about option).
+Android application code continues to use the existing provider and conversation abstractions. A new `NethraTransport` boundary selects `LanTransport` when a paired Windows service is discovered and reachable, otherwise the existing Firebase-backed provider/synchronizer remains available. A user-selectable mode supports `AUTO`, `LAN_ONLY`, and `REMOTE_ONLY` (the latter is the requested 5G/out-and-about option).
 
-Windows hosts a small TLS WebSocket server in the Electron main process. It delegates model execution to the existing `LocalAgentRuntime` and persistence to `LocalDataStore`; it does not expose the Ollama or companion server. The server binds to a private LAN address, advertises `_junction._tcp.local`, and accepts only authenticated paired Android devices.
+Windows hosts a small TLS WebSocket server in the Electron main process. It delegates model execution to the existing `LocalAgentRuntime` and persistence to `LocalDataStore`; it does not expose the Ollama or companion server. The server binds to a private LAN address, advertises `_nethra._tcp.local`, and accepts only authenticated paired Android devices.
 
 ## Security model
 
@@ -47,7 +47,7 @@ Stale records never overwrite a tombstone. Firebase listeners remain unchanged a
 
 ## Discovery and pairing UX
 
-Windows advertises only instance ID, service port, protocol version, and certificate fingerprint. Android uses `NsdManager` for `_junction._tcp.local` discovery and retains a manual host/port field only as a debug fallback. Windows exposes a settings action to create a short-lived pairing QR and a paired-device list with revoke actions. Android’s existing QR scanner is reused.
+Windows advertises only instance ID, service port, protocol version, and certificate fingerprint. Android uses `NsdManager` for `_nethra._tcp.local` discovery and retains a manual host/port field only as a debug fallback. Windows exposes a settings action to create a short-lived pairing QR and a paired-device list with revoke actions. Android’s existing QR scanner is reused.
 
 ## Failure behavior
 
